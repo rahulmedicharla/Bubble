@@ -9,6 +9,7 @@ let signedIn = true;
 function HomeScreen(){
   return(
     <View style={styles.container}>
+      <StatusBar></StatusBar>
       <Text>home</Text>
 
     </View>
@@ -23,6 +24,7 @@ function NearYou(){
 
   return(
       <View style={styles.container}>
+        <StatusBar></StatusBar>
         <MapView style={styles.map} showsUserLocation={true}>
           <Marker coordinate = {loc}></Marker>
         </MapView>
@@ -33,6 +35,7 @@ function NearYou(){
 function SignIn(){
   return(
     <View style={styles.container}>
+      <StatusBar></StatusBar>
       <Text>SignIn</Text>
     </View>
   );
@@ -41,6 +44,7 @@ function SignIn(){
 function NewAcct(){
   return(
     <View style={styles.container}>
+      <StatusBar></StatusBar>
       <Text>acct</Text>
     </View>
   );
@@ -53,7 +57,7 @@ export default function App() {
     console.log(signedIn);
     return(
       <NavigationContainer>
-        <Tab.Navigator>
+        <Tab.Navigator screenOptions={{headerShown: false}}>
           <Tab.Screen name="Home" component={HomeScreen}></Tab.Screen>
           <Tab.Screen name="NearYou" component={NearYou}></Tab.Screen>
         </Tab.Navigator>
