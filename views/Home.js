@@ -1,7 +1,12 @@
-import { StyleSheet, Text, View, Dimensions } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { getAuth } from 'firebase/auth';
 
-export const renderHome = () => {
+export const renderHome = () => {   
+    const auth = getAuth();
+
+    console.log(auth.currentUser);
+
     return(
         <View style={styles.container}>
             <StatusBar></StatusBar>

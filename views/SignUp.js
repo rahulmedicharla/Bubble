@@ -1,11 +1,82 @@
-import { StyleSheet, Text, View, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Button } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { TextInput } from 'react-native';
+//firebase imports
+import { getAuth, PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
+import { firebaseConfig } from '../config';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+//react special imports
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { dispatch } from '../App';
 
-export const renderSignUp = () => {
+export const renderSignUp = ({navigation}) => {
+    
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [code, setCode] = useState("");
+    const [verificationId, setVerificationId] = useState(null);
+    
+    const phoneNumInput = useRef(null);
+    const recaptchaVerifier = useRef(null);
+    
+    const auth = getAuth();
+
+    function goToLanding(){
+        navigation.goBack();
+    }
+
+    
+    const sendVerification = async(num) => {
+        try{
+            const phoneProvider = new PhoneAuthProvider(auth);
+            await phoneProvider.verifyPhoneNumber(num, recaptchaVerifier.current)
+            .then((verificationId) => {
+                setVerificationId(verificationId);
+            });
+        }catch(error){
+            console.log(error);
+
+        };
+    };
+
+    const confirmCode = async(id, code) => {
+        try{
+            const credential = PhoneAuthProvider.credential(
+                id,
+                code
+              );
+              await signInWithCredential(auth, credential).then((credential) => {
+                console.log(credential);
+              });
+        }catch(error){
+            console.log(error);
+        };
+    };
+    
+    useEffect(() => {
+        if(phoneNumber.length == 10){
+            sendVerification("+1" + phoneNumber);
+        }
+    },[phoneNumber]);
+
+    useEffect(() => {
+        if(code.length == 6){
+            confirmCode(verificationId, code);
+        }
+    }, [verificationId, code]);
+
     return(
         <View style={styles.container}>
             <StatusBar></StatusBar>
             <Text>Sign Up</Text>
+            <Button title="GoBack"onPress={goToLanding}></Button>
+            <FirebaseRecaptchaVerifierModal ref={recaptchaVerifier} firebaseConfig={firebaseConfig}></FirebaseRecaptchaVerifierModal>
+
+            <Text>Enter Phone number</Text>
+            <TextInput ref={phoneNumInput} placeholder="Phone Number"  onChangeText={setPhoneNumber} keyboardType="phone-pad" autoCompleteType="tel"></TextInput>
+
+            <Text>Enter Verifiation code</Text>
+            <TextInput placeholder="Code" onChangeText={setCode} keyboardType="number-pad"></TextInput>
+
         </View>
     );
 }
