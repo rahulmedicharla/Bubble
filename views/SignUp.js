@@ -3,10 +3,12 @@ import { StatusBar } from 'expo-status-bar';
 import { TextInput } from 'react-native';
 //firebase imports
 import { getAuth, PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
-import { firebaseConfig } from '../config';
+import { getApp } from 'firebase/app';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-//react special imports
+//react and redux special imports
 import React, {useEffect, useRef, useState } from 'react';
+import { useDispatch } from 'react-redux/';
+import { setSignIn } from '../redux/authSlice';
 
 export const renderSignUp = ({navigation}) => {
     
@@ -16,7 +18,10 @@ export const renderSignUp = ({navigation}) => {
     
     const phoneNumInput = useRef(null);
     const recaptchaVerifier = useRef(null);
-    
+
+    const dispatch = useDispatch();
+
+    const app = getApp();
     const auth = getAuth();
 
     function goToLanding(){
@@ -33,7 +38,6 @@ export const renderSignUp = ({navigation}) => {
             });
         }catch(error){
             console.log(error);
-
         };
     };
 
@@ -43,8 +47,13 @@ export const renderSignUp = ({navigation}) => {
                 id,
                 code
               );
-              await signInWithCredential(auth, credential).then((credential) => {
-                console.log(credential);
+              await signInWithCredential(auth, credential).then((credential) =>{
+                const user = {
+                    isLoggedIn: true,
+                    userToken: credential.user.uid + ""
+                };
+
+                dispatch(setSignIn(user));
               });
         }catch(error){
             console.log(error);
@@ -68,7 +77,7 @@ export const renderSignUp = ({navigation}) => {
             <StatusBar></StatusBar>
             <Text>Sign Up</Text>
             <Button title="GoBack"onPress={goToLanding}></Button>
-            <FirebaseRecaptchaVerifierModal ref={recaptchaVerifier} firebaseConfig={firebaseConfig}></FirebaseRecaptchaVerifierModal>
+            <FirebaseRecaptchaVerifierModal ref={recaptchaVerifier} firebaseConfig={app.options}></FirebaseRecaptchaVerifierModal>
 
             <Text>Enter Phone number</Text>
             <TextInput ref={phoneNumInput} placeholder="Phone Number"  onChangeText={setPhoneNumber} keyboardType="phone-pad" autoCompleteType="tel"></TextInput>
