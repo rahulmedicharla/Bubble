@@ -6,8 +6,7 @@ import { getAuth, PhoneAuthProvider, signInWithCredential } from 'firebase/auth'
 import { firebaseConfig } from '../config';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 //react special imports
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import { dispatch } from '../App';
+import React, {useEffect, useRef, useState } from 'react';
 
 export const renderSignUp = ({navigation}) => {
     

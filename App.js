@@ -8,7 +8,7 @@ import { TextInput } from 'react-native';
 //importing firebase
 import { initializeApp } from 'firebase/app';
 import { firebaseConfig } from './config';
-import { getAuth, PhoneAuthProvider, signInWithCredential, signInWithPhoneNumber } from 'firebase/auth';
+import { getAuth, PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 //importing views
 import { renderHome } from './views/Home';
@@ -59,14 +59,13 @@ const renderSignUp = ({navigation}) => {
   const phoneNumInput = useRef(null);
   const recaptchaVerifier = useRef(null);
 
-  const{ signIn } = useContext(AuthContext);
+  const { signIn } = useContext(AuthContext);  
   
   const auth = getAuth();
 
   function goToLanding(){
       navigation.goBack();
   }
-
   
   const sendVerification = async(num) => {
       try{
@@ -88,7 +87,7 @@ const renderSignUp = ({navigation}) => {
               code
             );
             await signInWithCredential(auth, credential).then((credential) => {
-              signIn(credential);
+              signIn(credential.user.uid + "");
             });
       }catch(error){
           console.log(error);
@@ -160,11 +159,11 @@ export default function App() {
     const bootstrapAsync = async () => {
       let userToken = null;
 
-      // try {
-      //   userToken = await AsyncStorage.getItem('userToken');
-      // } catch (error) {
-      //   console.log("Getting Credntial from async storage" + error)
-      // }
+      try {
+        userToken = await AsyncStorage.getItem('userToken');
+      } catch (error) {
+        console.log("Getting Credntial from async storage" + error)
+      }
 
       // After restoring token, we may need to validate it in production apps
 
@@ -182,11 +181,11 @@ export default function App() {
       // We will also need to handle errors if sign in failed
       // After getting token, we need to persist the token using `SecureStore`
       // In the example, we'll use a dummy token
-      // try{
-      //   await AsyncStorage.setItem('userToken', data.user.uid);  
-      // }catch (error) {
-      //   console.log("Setting Credential to AsyncStorage" + error);
-      // }
+      try{
+        await AsyncStorage.setItem('userToken', data);  
+      }catch (error) {
+        console.log("Setting Credential to AsyncStorage" + error);
+      }
       
       dispatch({ type: 'SIGN_IN', token: "sampleToken" });
     },
@@ -215,30 +214,6 @@ export default function App() {
       </NavigationContainer>
     </AuthContext.Provider> 
   );
-
-  // if(auth.currentUser){
-  //   return(
-  //     <NavigationContainer>
-  //       <Tab.Navigator screenOptions={{headerShown: false}}>
-  //         <Tab.Screen name="Home">{renderHome}</Tab.Screen>
-  //         <Tab.Screen name="NearYou">{renderNearYou}</Tab.Screen>
-  //         <Tab.Screen name="Profile">{renderProfile}</Tab.Screen>
-  //       </Tab.Navigator>
-  //     </NavigationContainer>
-  //   );
-  // }else{
-  //   return(
-  //     <NavigationContainer>
-  //       <Stack.Navigator screenOptions={{
-  //          headerShown: false,
-  //          tabBarStyle: { display: "none"}
-  //          }}>
-  //         <Stack.Screen name = "Landing">{renderLanding}</Stack.Screen>
-  //         <Stack.Screen name = "SignUp">{renderSignUp}</Stack.Screen>
-  //       </Stack.Navigator>
-  //     </NavigationContainer>
-  //   );
-  // }
 }
 
 const styles = StyleSheet.create({
