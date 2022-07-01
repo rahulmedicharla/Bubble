@@ -8,9 +8,9 @@ import { renderNearYou } from './views/NearYou';
 import { renderSignUp } from './views/SignUp';
 import { renderLanding } from './views/Landing';
 import { renderProfile } from './views/Profile';
-import { selectIsLoggedIn, setSignIn } from './redux/authSlice';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useDispatch, useSelector } from 'react-redux/';
+//redux imports
+import { selectIsLoggedIn } from './redux/authSlice';
+import { useSelector } from 'react-redux/';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
