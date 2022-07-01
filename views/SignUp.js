@@ -16,7 +16,6 @@ export const renderSignUp = ({navigation}) => {
     const [code, setCode] = useState("");
     const [verificationId, setVerificationId] = useState(null);
     
-    const phoneNumInput = useRef(null);
     const recaptchaVerifier = useRef(null);
 
     const dispatch = useDispatch();
@@ -80,7 +79,7 @@ export const renderSignUp = ({navigation}) => {
             <FirebaseRecaptchaVerifierModal ref={recaptchaVerifier} firebaseConfig={app.options}></FirebaseRecaptchaVerifierModal>
 
             <Text>Enter Phone number</Text>
-            <TextInput ref={phoneNumInput} placeholder="Phone Number"  onChangeText={setPhoneNumber} keyboardType="phone-pad" autoCompleteType="tel"></TextInput>
+            <TextInput placeholder="Phone Number"  onChangeText={setPhoneNumber} keyboardType="phone-pad" autoCompleteType="tel"></TextInput>
 
             <Text>Enter Verifiation code</Text>
             <TextInput placeholder="Code" onChangeText={setCode} keyboardType="number-pad"></TextInput>

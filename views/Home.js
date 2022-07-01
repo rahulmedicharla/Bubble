@@ -1,14 +1,23 @@
-import { StyleSheet, Text, View, Button } from 'react-native';
+import { StyleSheet, Text, View, Button, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { getFirestore, getDoc, doc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 
-export const renderHome = () => {  
+export const renderHome = () => { 
+    
+    const firestore = getFirestore();
+    const auth = getAuth();
     
     const printStorage = async() => {
-        let temp = await AsyncStorage.getItem('userToken');
-        console.log(temp);
+        try{
+            const docRef = doc(firestore, "users", auth.currentUser.uid + "");
+            const docSnap = await getDoc(docRef);
+            console.log(docSnap.data());
+        }catch(error){
+            console.log(error);
+        }
     }
-
-   
     return(
         <View style={styles.container}>
             <StatusBar></StatusBar>
