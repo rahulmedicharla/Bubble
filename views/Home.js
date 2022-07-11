@@ -1,33 +1,19 @@
 import { StyleSheet, Text, View, Button, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { getFirestore, getDoc, doc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { useEffect, useState, useReducer } from 'react';
-import { shallowEqual, useDispatch, useSelector } from 'react-redux';
-import { getUsername, selectIsLoaded, selectUsername} from '../redux/firestoreSlice';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { getUsername, selectUsername} from '../redux/firestoreSlice';
 
 export const renderHome = () => { 
     
-    const firestore = getFirestore();
     const auth = getAuth();
 
     const dispatch = useDispatch();
-    const username = useSelector(selectUsername, shallowEqual);
-    const isLoaded = useSelector(selectIsLoaded, shallowEqual);
-    
-    const printStorage = () => {
-        try{
-            const docRef = doc(firestore, "users", auth.currentUser.uid + "");
-            const docSnap = await getDoc(docRef);
-            console.log(docSnap.data());
-            return docSnap.data().username;
-        }catch(error){
-            console.log(error);
-        }
-    }
+    const username = useSelector(selectUsername)
 
     useEffect(() => {
-        console.log(username + "..." + isLoaded);
+        console.log(username);
         dispatch(getUsername(auth.currentUser.uid));
     }, [username]);
 
@@ -35,8 +21,7 @@ export const renderHome = () => {
         <View style={styles.container}>
             <StatusBar></StatusBar>
             <Text>Home</Text>
-            <Button title = "Print" onPress={printStorage}></Button>
-            {isLoaded == false ? (
+            {username == null ? (
                 <Text>Welcome, set your username in profile page</Text>
             ) : (
                 <Text>Welcome, {username}</Text>

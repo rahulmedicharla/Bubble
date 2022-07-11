@@ -9,6 +9,8 @@ import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import React, {useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux/';
 import { setSignIn } from '../redux/authSlice';
+import { doc, getFirestore, setDoc, getDoc } from 'firebase/firestore';
+import { newUserDoc } from '../redux/firestoreSlice';
 
 export const renderSignUp = ({navigation}) => {
     
@@ -40,6 +42,7 @@ export const renderSignUp = ({navigation}) => {
         };
     };
 
+
     const confirmCode = async(id, code) => {
         try{
             const credential = PhoneAuthProvider.credential(
@@ -51,6 +54,8 @@ export const renderSignUp = ({navigation}) => {
                     isLoggedIn: true,
                     userToken: credential.user.uid + ""
                 };
+
+                newUserDoc(credential.user.uid);
 
                 dispatch(setSignIn(user));
               });
