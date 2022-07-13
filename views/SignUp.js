@@ -9,8 +9,7 @@ import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import React, {useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux/';
 import { setSignIn } from '../redux/authSlice';
-import { doc, getFirestore, setDoc, getDoc } from 'firebase/firestore';
-import { newUserDoc } from '../redux/firestoreSlice';
+import { getProfilePic, getUsername, newUserDoc } from '../redux/firestoreSlice';
 
 export const renderSignUp = ({navigation}) => {
     
@@ -56,13 +55,15 @@ export const renderSignUp = ({navigation}) => {
                 };
 
                 newUserDoc(credential.user.uid);
-
+                dispatch(getUsername(credential.user.uid));
+                dispatch(getProfilePic(credential.user.uid));
                 dispatch(setSignIn(user));
               });
         }catch(error){
             console.log(error);
         };
     };
+
     
     useEffect(() => {
         if(phoneNumber.length == 10){

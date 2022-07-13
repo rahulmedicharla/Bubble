@@ -1,6 +1,6 @@
 //react imports
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, Text, Button} from "react-native";
+import { StyleSheet, View, Text, Button, Image} from "react-native";
 import { TextInput } from "react-native";
 import { Formik } from "formik";
 import * as ImagePicker from 'expo-image-picker';
@@ -12,7 +12,7 @@ import { doc, getFirestore, updateDoc } from "firebase/firestore";
 import { useDispatch, useSelector } from 'react-redux/';
 import { setSignOut } from '../redux/authSlice';
 import { useEffect, useState } from "react";
-import { saveUsername, selectUsername, setUsername } from "../redux/firestoreSlice";
+import { saveUsername, selectProfilePic, selectUsername, setUsername, uploadImg } from "../redux/firestoreSlice";
 
 
 export const renderProfile = ({navigation}) => {
@@ -21,6 +21,7 @@ export const renderProfile = ({navigation}) => {
 
   const dispatch = useDispatch();
   const username = useSelector(selectUsername);
+  const profilePicUrl = useSelector(selectProfilePic);
 
   const [img, setImg] = useState(null);
 
@@ -35,60 +36,10 @@ export const renderProfile = ({navigation}) => {
 
   useEffect(() => {
     if(img != null){
-      uploadImg();
+      uploadImg(auth.currentUser.uid, img);
     }
     
   }, [img])
-
-  const uploadImg = async() => {
-    try{
-      console.log('1');
-      const storage = getStorage();
-      const storageRef = ref(storage, "profilePics/" + auth.currentUser.uid);
-
-      console.log('2')
-
-      const blob = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.onload = function() {
-          resolve(xhr.response); 
-       };
-       xhr.onerror = function() {
-         reject(new TypeError('Network request failed')); 
-       };
-       xhr.responseType = 'blob'; 
-       xhr.open('GET', img, true);  
-       xhr.send(null); 
-     });
-
-      console.log('3');
-
-      await uploadBytes(storageRef, blob).then(() => {
-        console.log('success');
-        getPicUrl(auth.currentUser.uid);
-      }).catch((e) => {
-        console.log('special' + e);
-      });
-    }catch(e){
-      console.log(e);
-  }
-  }
-
-  const getPicUrl = async(userId) => {
-    const storage = getStorage();
-    await getDownloadURL(ref(storage, "profilePics/" + userId)).then((url) => {
-      storeProfilePic(userId, url);
-    })
-}
-
-const storeProfilePic = async(userId, url) => {
-    const firestore = getFirestore();
-    const docRef = doc(firestore, "users", userId);
-
-    await updateDoc(docRef, {
-        profilePic: url
-    })
-}
 
   const pickImage = async () => {
     // No permissions request is necessary for launching the image library
@@ -134,6 +85,8 @@ const storeProfilePic = async(userId, url) => {
           )}
         </Formik>
         <Button title= "upload profile pic" onPress={pickImage}></Button>
+        <Text>Current Profile Pic</Text>
+        <Image style={{width: 150, height: 150}} source={{uri: profilePicUrl}}></Image>
       </View>
     );
 }

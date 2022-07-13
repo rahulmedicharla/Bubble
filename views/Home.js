@@ -13,8 +13,7 @@ export const renderHome = () => {
     const username = useSelector(selectUsername)
 
     useEffect(() => {
-        console.log(username);
-        dispatch(getUsername(auth.currentUser.uid));
+        console.log(username);   
     }, [username]);
 
     return(
