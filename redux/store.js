@@ -7,6 +7,6 @@ export const store = configureStore({
     reducer: {
         firestore: firestoreSlice,
         userAuth: authSlice,
-        realtimeDatabase: RTDatabseSlice
+        realtimeDatabase: RTDatabseSlice,
     },
 })

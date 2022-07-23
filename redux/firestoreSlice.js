@@ -111,7 +111,7 @@ export const getProfilePic = createAsyncThunk('firestore/getProfilePic', async(u
 const createDoc = async(userId) => {
     const firestore = getFirestore();
     await setDoc(doc(firestore, "users", userId), {
-        username: userId
+        username: userId,
     })
 }
 
@@ -143,6 +143,7 @@ const firestoreSlice = createSlice({
             return Object.assign({}, state, {profilePic: action.payload.profilePic})
         })
     }
+    
 });
 
 export const { setUsername } = firestoreSlice.actions;

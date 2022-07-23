@@ -10,6 +10,8 @@ import React, {useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux/';
 import { setSignIn } from '../redux/authSlice';
 import { getProfilePic, getUsername, newUserDoc } from '../redux/firestoreSlice';
+import { loadFriendsLocations, newUserRLDB } from '../redux/RTDatabseSlice';
+
 
 export const renderSignUp = ({navigation}) => {
     
@@ -27,7 +29,6 @@ export const renderSignUp = ({navigation}) => {
     function goToLanding(){
         navigation.goBack();
     }
-
     
     const sendVerification = async(num) => {
         try{
@@ -54,7 +55,9 @@ export const renderSignUp = ({navigation}) => {
                     userToken: credential.user.uid + ""
                 };
 
+                newUserRLDB(credential.user.uid);
                 newUserDoc(credential.user.uid);
+
                 dispatch(getUsername(credential.user.uid));
                 dispatch(getProfilePic(credential.user.uid));
                 dispatch(setSignIn(user));
