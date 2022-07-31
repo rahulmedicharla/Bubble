@@ -10,7 +10,7 @@ import React, {useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux/';
 import { setSignIn } from '../redux/authSlice';
 import { getProfilePic, getUsername, newUserDoc } from '../redux/firestoreSlice';
-import { loadFriendsLocations, newUserRLDB } from '../redux/RTDatabseSlice';
+import {  newUserRLDB } from '../redux/RTDatabseSlice';
 
 
 export const renderSignUp = ({navigation}) => {

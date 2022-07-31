@@ -14,10 +14,6 @@ export const renderHome = () => {
     const username = useSelector(selectUsername)
     const loc = useSelector(selectCurrentLocation);
 
-    useEffect(() => {
-        console.log(username);   
-    }, [username]);
-
     return(
         <View style={styles.container}>
             <StatusBar></StatusBar>

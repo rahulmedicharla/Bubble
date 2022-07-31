@@ -6,14 +6,12 @@ import { Formik } from "formik";
 import * as ImagePicker from 'expo-image-picker';
 //firebase imports
 import { getAuth, signOut } from 'firebase/auth';
-import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
-import { doc, getFirestore, updateDoc } from "firebase/firestore";
 //redux imports
 import { useDispatch, useSelector } from 'react-redux/';
 import { setSignOut } from '../redux/authSlice';
 import { useEffect, useState } from "react";
 import { saveUsername, selectProfilePic, selectUsername, setUsername, uploadImg } from "../redux/firestoreSlice";
-
+import { selectFriendToken } from "../redux/RTDatabseSlice";
 
 export const renderProfile = ({navigation}) => {
 
@@ -22,6 +20,7 @@ export const renderProfile = ({navigation}) => {
   const dispatch = useDispatch();
   const username = useSelector(selectUsername);
   const profilePicUrl = useSelector(selectProfilePic);
+  const friendToken = useSelector(selectFriendToken);
 
   const [img, setImg] = useState(null);
 
@@ -87,6 +86,8 @@ export const renderProfile = ({navigation}) => {
         <Button title= "upload profile pic" onPress={pickImage}></Button>
         <Text>Current Profile Pic</Text>
         <Image style={{width: 150, height: 150}} source={{uri: profilePicUrl}}></Image>
+        <Text>Friend Token</Text>
+        <Text>{friendToken}</Text>
       </View>
     );
 }

@@ -5,7 +5,8 @@ import { getStorage, uploadBytes, ref, getDownloadURL } from 'firebase/storage';
 const initialState = {
     isLoaded: false,
     username: null,
-    profilePic: null
+    profilePic: null,
+    friendToken: ""
 }
 
 
@@ -112,6 +113,7 @@ const createDoc = async(userId) => {
     const firestore = getFirestore();
     await setDoc(doc(firestore, "users", userId), {
         username: userId,
+        friendToken: userId.substring(0,6)
     })
 }
 
