@@ -1,7 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View, Text, Button} from "react-native";
 
-export const renderLanding = ({navigation}) => {
+export const LandingPage = ({navigation}) => {
     const goToSignUp = () => {
       navigation.navigate('SignUp');
     }

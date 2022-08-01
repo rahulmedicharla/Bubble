@@ -1,64 +1,30 @@
 //react imports
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, Text, Button, Image} from "react-native";
+import { StyleSheet, View, Text, Button} from "react-native";
 import { TextInput } from "react-native";
 import { Formik } from "formik";
-import * as ImagePicker from 'expo-image-picker';
 //firebase imports
 import { getAuth, signOut } from 'firebase/auth';
 //redux imports
-import { useDispatch, useSelector } from 'react-redux/';
+import { useDispatch } from 'react-redux/';
 import { setSignOut } from '../redux/authSlice';
-import { useEffect, useState } from "react";
-import { saveUsername, selectProfilePic, selectUsername, setUsername, uploadImg } from "../redux/firestoreSlice";
-import { selectFriendToken } from "../redux/RTDatabseSlice";
+import { saveUsername, setUsername } from "../redux/firestoreSlice";
 
-export const renderProfile = ({navigation}) => {
+export const ProfilePage = ({navigation, username, userToken, profilePicUrl, friendToken}) => {
 
   const auth = getAuth();
 
   const dispatch = useDispatch();
-  const username = useSelector(selectUsername);
-  const profilePicUrl = useSelector(selectProfilePic);
-  const friendToken = useSelector(selectFriendToken);
 
-  const [img, setImg] = useState(null);
 
   const storeUsername =  (name) => {
-    data = {
+    const data = {
       isLoaded: false,
       username: name
     }
     dispatch(setUsername(data));
-    saveUsername(auth.currentUser.uid, name);
+    saveUsername(userToken, name);
   }  
-
-  useEffect(() => {
-    if(img != null){
-      uploadImg(auth.currentUser.uid, img);
-    }
-    
-  }, [img])
-
-  const pickImage = async () => {
-    // No permissions request is necessary for launching the image library
-    ImagePicker.requestMediaLibraryPermissionsAsync().then(async () => {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      }).catch((e) => {
-        console.log(e);
-      });
-
-      console.log(result);
-      if (!result.cancelled) {
-        setImg(result.uri); 
-      }
-    }).catch((e) => {
-      console.log(e);
-    })
-  };
  
   const signUserOut = () => {
     signOut(auth).then(() => {
@@ -83,9 +49,6 @@ export const renderProfile = ({navigation}) => {
           </View>
           )}
         </Formik>
-        <Button title= "upload profile pic" onPress={pickImage}></Button>
-        <Text>Current Profile Pic</Text>
-        <Image style={{width: 150, height: 150}} source={{uri: profilePicUrl}}></Image>
         <Text>Friend Token</Text>
         <Text>{friendToken}</Text>
       </View>

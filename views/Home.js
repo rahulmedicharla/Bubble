@@ -1,19 +1,8 @@
 import { StyleSheet, Text, View, Button, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { getAuth } from 'firebase/auth';
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { selectUsername} from '../redux/firestoreSlice';
-import { selectCurrentLocation } from '../redux/RTDatabseSlice';
 
-export const renderHome = () => { 
-    
-    const auth = getAuth();
 
-    const dispatch = useDispatch();
-    const username = useSelector(selectUsername)
-    const loc = useSelector(selectCurrentLocation);
-
+export const HomePage = ({navigation, username}) => { 
     return(
         <View style={styles.container}>
             <StatusBar></StatusBar>

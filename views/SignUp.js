@@ -9,11 +9,11 @@ import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import React, {useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux/';
 import { setSignIn } from '../redux/authSlice';
-import { getProfilePic, getUsername, newUserDoc } from '../redux/firestoreSlice';
-import {  newUserRLDB } from '../redux/RTDatabseSlice';
+import { getUsername, newUserDoc } from '../redux/firestoreSlice';
+import { loadDatabaseData, newUserRLDB } from '../redux/RTDatabseSlice';
 
 
-export const renderSignUp = ({navigation}) => {
+export const SignUpPage = ({navigation}) => {
     
     const [phoneNumber, setPhoneNumber] = useState("");
     const [code, setCode] = useState("");
@@ -58,8 +58,9 @@ export const renderSignUp = ({navigation}) => {
                 newUserRLDB(credential.user.uid);
                 newUserDoc(credential.user.uid);
 
+                dispatch(loadDatabaseData(credential.user.uid));
                 dispatch(getUsername(credential.user.uid));
-                dispatch(getProfilePic(credential.user.uid));
+
                 dispatch(setSignIn(user));
               });
         }catch(error){

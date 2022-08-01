@@ -1,4 +1,4 @@
-import { createAction, createReducer, createSlice } from "@reduxjs/toolkit"
+import { createAction, createAsyncThunk, createReducer, createSlice } from "@reduxjs/toolkit"
 import { child, get, getDatabase, push, ref, set, update } from 'firebase/database';
 
 /**
@@ -91,6 +91,62 @@ export const uploadCurrentLoc = ((friendToken, loc, username) => {
     
 })
 
+/*
+
+    SETTING DATA IN REDUX STORE ON LOAD
+
+*/
+
+export const loadDatabaseData = createAsyncThunk('realtimeDatabase/loadDatabaseData', async(userId) => {
+    const db = getDatabase();
+    const dbRef = ref(db);
+
+    const snapshot = await get(child(dbRef, userId.substring(0,6) + '/friends'));
+
+    const parsedLocations = [];
+    let friendToken = "";
+
+    //Checking if user exists
+    if(snapshot.exists()){
+        //going through each child
+        snapshot.forEach((child) => {
+            switch(child.key){
+                case "friendToken":
+                    friendToken = child.val();
+                    break;
+                default: 
+                    //going through friend user object
+                    let user = {};
+                    child.forEach((grandChild) => {
+                        switch(grandChild.key){
+                            case "name":
+                                user["name"] = grandChild.val();
+                                break;
+                            default: 
+                                //going through users latLng Object
+                                const retreivedLoc = {};
+                                grandChild.forEach((latLng) => {
+                                    const val = parseFloat(latLng.val());
+                                    const key = latLng.key;
+                                    retreivedLoc[key + ""] = val;
+                                })
+                                user["latLng"] = retreivedLoc;
+                                break;
+                        }
+                    })
+                    parsedLocations.push(user);
+                    break;
+            }
+        })
+    }
+    const data = {
+        friends: parsedLocations,
+        isLive: true,
+        friendToken: friendToken
+    }
+    return data;
+})
+
 /**
  * NEW USER REGISTRATION IN RTDB
  */
@@ -116,9 +172,6 @@ const initialState = {
     isLive: false,
     loc: {},
     friendToken: null,
-    pendingFriend: {},
-    pendingFriendToken: null,
-    pendingFriendStatus: null,
 }
 
 const RTDatabaseSlice = createSlice({
@@ -132,35 +185,23 @@ const RTDatabaseSlice = createSlice({
         },
         setCurrentLocation: (state, action) => {
             state.loc = action.payload.loc;
-        },
-        setPendingFriend: (state, action) => {
-            state.pendingFriend = action.payload.pendingFriend;
-            state.pendingFriendStatus = action.payload.pendingFriendStatus;
-            state.pendingFriendToken = action.payload.pendingFriendToken;
-        },
-        setPendingFriendToken: (state,action) => {
-            state.pendingFriendToken = action.payload.pendingFriendToken;
-        },
-        setPendingStatus: (state, action) => {
-            state.pendingFriendStatus = action.payload.pendingFriendStatus;
-        },
-        resetPendingFriendRequest: (state) => {
-            state.pendingFriendToken = null;
-            state.pendingFriend = {};
-            state.pendingFriendStatus = null;
         }
     },
+    extraReducers: (builder) =>  {
+        builder.addCase(loadDatabaseData.fulfilled, (state,action) => {
+            state.friendsLocation = action.payload.friends;
+            state.isLive = action.payload.isLive;
+            state.friendToken = action.payload.friendToken;
+        })
+    }
     
 });
 
-export const { setFriendsLocation, setCurrentLocation, setPendingFriend, setPendingFriendToken, setPendingStatus, resetPendingFriendRequest} = RTDatabaseSlice.actions;
+export const { setFriendsLocation, setCurrentLocation} = RTDatabaseSlice.actions;
 
 export const selectCurrentLocation = (state) => state.realtimeDatabase.loc;
 export const selectFriendsLocation = (state) => state.realtimeDatabase.friendsLocation;
 export const selectFriendToken = (state) => state.realtimeDatabase.friendToken;
 export const selectIsLive = (state) => state.realtimeDatabase.isLive;
-export const selectPendingFriendToken = (state) => state.realtimeDatabase.pendingFriendToken;
-export const selectPendingFriend = (state) => state.realtimeDatabase.pendingFriend;
-export const selectPendingFriendStatus = (state) => state.realtimeDatabase.pendingFriendStatus;
 
 export default RTDatabaseSlice.reducer;

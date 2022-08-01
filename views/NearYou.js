@@ -1,7 +1,7 @@
 //react imports
 import { getCurrentPositionAsync, requestForegroundPermissionsAsync } from 'expo-location';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Dimensions, Button, Text, TextInput } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Formik } from "formik";
@@ -12,15 +12,13 @@ import { getAuth } from 'firebase/auth';
 import { child, get, getDatabase, ref } from 'firebase/database';
 
 //redux imports
-import { activatePendingFriendRequest, addUsersAsFriends, resetPendingFriendRequest, selectCurrentLocation, selectFriendsLocation, selectFriendToken, selectIsLive, selectPendingFriend, selectPendingFriendStatus, selectPendingFriendToken, updateStatusToFulfilled } from '../redux/RTDatabseSlice';
-import { setFriendsLocation, setCurrentLocation, setPendingFriendToken, setPendingStatus, setPendingFriend } from '../redux/RTDatabseSlice';
-import { useDispatch, useSelector } from 'react-redux';
-import { selectUsername } from '../redux/firestoreSlice';
+import { setFriendsLocation, setCurrentLocation } from '../redux/RTDatabseSlice';
+import { useDispatch } from 'react-redux';
 
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
 
-export const renderNearYou = () => {
+export const NearYouPage = ({navigation, friendsLocation, friendToken, isLive, currentLoc}) => {
   //firebase consts
   const auth = getAuth();
   const database = getDatabase();
@@ -33,27 +31,7 @@ export const renderNearYou = () => {
   const sheetRef = useRef(null);
   const snapPoints = ["15%", "40%"]
 
-  //redux variables
-  //RTDB stores
-  const friendsLocation = useSelector(selectFriendsLocation);
-  const friendToken = useSelector(selectFriendToken);
-  const isLive = useSelector(selectIsLive);
-  const currentLoc = useSelector(selectCurrentLocation);
-  const pendingFriend = useSelector(selectPendingFriend);
-  const pendingFriendToken = useSelector(selectPendingFriendToken);
-  const pendingFriendStatus = useSelector(selectPendingFriendStatus);
-  
-  //firestore stores
-  const username = useSelector(selectUsername);
-
   const dispatch = useDispatch();
-
-  const acceptFriendRequest = () => {
-    const data = {
-      pendingFriendStatus: 'fulfilled'
-    }
-    dispatch(setPendingStatus(data));
-  } 
 
   const submitFriendToken = (oFriendToken) => {
     //verifying if friend token exists
@@ -61,10 +39,6 @@ export const renderNearYou = () => {
     get(child(dbRef, oFriendToken + '/friends/')).then((snapshot) => {
       if(snapshot.exists()){
 
-        const data = {
-          pendingFriendToken: 'temp' + oFriendToken
-        }
-        dispatch(setPendingFriendToken(data));
 
       }else{
         alert('invalid Token');
@@ -96,109 +70,12 @@ export const renderNearYou = () => {
     });
   }
 
-  const getFriendsLocation = ((userId) => {
-
-    const dbRef = ref(database);
-
-    const parsedLocations = [];
-    let pendingFriendRequest = {};
-    let pendingFriendStatus = "";
-    let pendingFriendToken = "";
-    let friendToken = "";
-    get(child(dbRef, userId.substring(0,6) + '/friends')).then((snapshot) => {
-        //Checking if user exists
-        if(snapshot.exists()){
-          //going through all child elements {a:{}} => a
-             snapshot.forEach((child) => {
-              //sifting through all keys
-                switch(child.key){
-                  case "friendToken": 
-                    friendToken = child.val();
-                    break;  
-                  case "pendingFriendRequest": 
-                    pendingFriendRequest = child.val();
-                    pendingFriendStatus = child.val().status;
-                    pendingFriendToken = child.val().friendToken;
-                    break;
-                  default: 
-                    let user = {};
-                    child.forEach((grandChild) => {
-
-                      //Sifiting through langLAng objc and current name
-
-                      switch(grandChild.key){
-                        case "name" :
-                          user["name"] = grandChild.val();
-                          break;
-                        default: 
-                          const retreivedLoc = {};
-                          grandChild.forEach((latLng) => {
-                            const val = parseFloat(latLng.val());
-                            const key = latLng.key;
-                            retreivedLoc[key + ""] = val;
-                          })
-                          user["latLng"] = retreivedLoc;
-                      } 
-                    })
-                    parsedLocations.push(user);
-                    break;
-                }
-                
-            })
-            
-            if(pendingFriendStatus == 'needsAction' || pendingFriendStatus == 'pending'){
-              console.log("pending");
-              const data = {
-                pendingFriend: pendingFriendRequest,
-                pendingFriendStatus: pendingFriendStatus,
-                pendingFriendToken: pendingFriendToken
-              }
-              dispatch(setPendingFriend(data));
-            }else if(pendingFriendStatus == 'fulfilled'){
-              console.log('uploading');
-              const data = {
-                pendingFriendStatus: 'upload',
-                pendingFriend: pendingFriendRequest,
-                pendingFriendToken: pendingFriendToken
-              }
-              dispatch(setPendingFriend(data));
-            }
-
-            console.log(parsedLocations);
-            const loc = {
-              friends: parsedLocations,
-              isLive: true,
-              friendToken: friendToken
-            }
-            dispatch(setFriendsLocation(loc))
-        }
-    })
-  })
-
   /**
    * USE EFFECTS
    */
 
-
   useEffect(() => {
-    if(pendingFriendToken != null && pendingFriendToken.includes('temp')){
-      activatePendingFriendRequest(friendToken, username, pendingFriendToken.substring(4));
-    }
-  }, [pendingFriendToken, friendToken, username])
-
-  useEffect(() => {
-    if(pendingFriendStatus == 'fulfilled'){
-      updateStatusToFulfilled(friendToken, pendingFriendToken);
-    } else if(pendingFriendStatus == 'upload'){
-      console.log(pendingFriendToken);
-      addUsersAsFriends(pendingFriendToken, currentLoc, username, friendToken);
-      dispatch(resetPendingFriendRequest());
-    }
-  }, [pendingFriendStatus, pendingFriendToken, friendToken, currentLoc, username])
-
-  useEffect(() => {
-    getCurrentLocation();
-    getFriendsLocation(auth.currentUser.uid);
+    //getCurrentLocation();
   }, [])
 
   useEffect(() => {
@@ -207,20 +84,13 @@ export const renderNearYou = () => {
     }
   }, [region]);
 
-  
-  const loc = {
-    latitude: 41.739,
-    longitude: -87.554,
-  }
-
   return(
       <View style={styles.container}>
         <StatusBar></StatusBar>
         <MapView style={styles.map} showsUserLocation={true} ref={map} showsBuildings={true}>
-          <Marker coordinate = {loc}></Marker>
-          {isLive == true ? friendsLocation.map(marker => {
-            <Marker title = {marker.name} key = {marker.name} coordinate={marker.latLng}></Marker>
-          }): null}
+          {friendsLocation.map(marker => {
+            (<Marker coordinate={marker.latLng}></Marker>)
+          })}
         </MapView>
         <BottomSheet ref={sheetRef} snapPoints={snapPoints}>
           <BottomSheetView>
@@ -233,17 +103,6 @@ export const renderNearYou = () => {
               </View>
             )}
             </Formik>
-            {pendingFriendStatus == 'needsAction' ? (
-                <View>
-                  <Text>Accept friend request from {pendingFriend.username}</Text>
-                  <Button title = "accept" onPress={acceptFriendRequest}></Button>
-                </View>
-            ) : null}
-            {pendingFriendStatus == 'pending' ? (
-                <View>
-                  <Text>Waiting for {pendingFriend.friendToken} to accept request</Text>
-                </View>
-            ) : null}
           </BottomSheetView>
         </BottomSheet>
       </View>
