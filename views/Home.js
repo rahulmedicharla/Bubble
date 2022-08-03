@@ -7,11 +7,7 @@ export const HomePage = ({navigation, username}) => {
         <View style={styles.container}>
             <StatusBar></StatusBar>
             <Text>Home</Text>
-            {username == null ? (
-                <Text>Welcome, set your username in profile page</Text>
-            ) : (
-                <Text>Welcome, {username}</Text>
-            )}
+            <Text>Welcome, {username}</Text>
         </View>
     );
 }

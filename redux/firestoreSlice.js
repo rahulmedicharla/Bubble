@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { doc, getDoc, getFirestore, updateDoc, setDoc } from "firebase/firestore";
-import { getStorage, uploadBytes, ref, getDownloadURL } from 'firebase/storage';
 
 
 /*
@@ -26,22 +25,25 @@ export const getUsername = createAsyncThunk('firestore/getUsername', async (user
     CREATING DOC FOR NEW USERS
 
 */
-const createDoc = async(userId) => {
+
+export const newUserDoc = async(userId, name) => {
     const firestore = getFirestore();
     await setDoc(doc(firestore, "users", userId), {
-        username: userId,
-        friendToken: userId.substring(0,6)
+        username: name,
     })
 }
 
-export const newUserDoc = async(userId) => {
-    const firestore = getFirestore();
-    const docRef = doc(firestore, "users", userId);
-    const docSnap = await getDoc(docRef);
+/*
 
-    if(!docSnap.exists()){
-        createDoc(userId);
-    }
+    STORING DATA IN FIREBSTORE
+
+*/
+
+export const saveUsername = async(userId, newName) => {
+    const firestore = getFirestore();
+    await updateDoc(doc(firestore, "users", userId), {
+        username: newName
+    })
 }
 
 /**
@@ -51,7 +53,6 @@ export const newUserDoc = async(userId) => {
 const initialState = {
     isLoaded: false,
     username: null,
-    profilePic: null,
 }
 
 const firestoreSlice = createSlice({
@@ -75,6 +76,5 @@ export const { setUsername } = firestoreSlice.actions;
 
 export const selectUsername = (state) => state.firestore.username;
 export const selectIsLoaded = (state) => state.firestore.isLoaded;
-export const selectProfilePic = (state) => state.firestore.profilePic;
 
 export default firestoreSlice.reducer;

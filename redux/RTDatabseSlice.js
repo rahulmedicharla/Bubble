@@ -1,51 +1,62 @@
-import { createAction, createAsyncThunk, createReducer, createSlice } from "@reduxjs/toolkit"
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
+import { getCurrentPositionAsync, requestForegroundPermissionsAsync } from "expo-location";
 import { child, get, getDatabase, push, ref, set, update } from 'firebase/database';
 
-/**
- * ADDING USERS AS FRIENDS
- */
+/*
+
+    ADDING USERS AS FRIENDS
+
+*/
+
+export const validateFriendToken = (myName, myFriendToken, otherFriendToken) => {
+    const db = getDatabase();
+    const dbRef = ref(db);
+    get(child(dbRef, otherFriendToken)).then((snapshot) => {
+      if(snapshot.exists()){
+        activeFriendRequest(myName, myFriendToken, otherFriendToken);
+      }else{
+        alert('invalid Token');
+      }
+    })
+}
+
+const activeFriendRequest = (myName, myFriendToken, otherFriendToken) => {
+    const db = getDatabase();
+
+    update(ref(db, otherFriendToken + '/pendingFriendRequest'), {
+        status: 'needsAction',
+        username: myName,
+        friendToken: myFriendToken
+    }).then(() => {
+        console.log('activated');
+    })
+
+    update(ref(db, myFriendToken + '/pendingFriendRequest'), {
+        status: 'pending',
+        friendToken: otherFriendToken
+    }).then(() => {
+        console.log('activated');
+    })
+
+}
 
 export const updateStatusToFulfilled = (myFriendToken, otherFriendToken) => {
+    console.log('for some reason');
     const db = getDatabase();
 
-    update(ref(db, myFriendToken + '/friends/pendingFriendRequest/'), {
-        status: 'fulfilled',
+    update(ref(db, otherFriendToken + '/pendingFriendRequest'), {
+        status: 'fulfilled'
     }).then(() => {
-        console.log('fulfilled');
     })
 
-    update(ref(db, otherFriendToken + '/friends/pendingFriendRequest/'), {
-        status: 'fulfilled',
+    update(ref(db, myFriendToken + '/pendingFriendRequest/'), {
+        status: 'fulfilled'
     }).then(() => {
-        console.log('fulfilled');
     })
 }
 
-export const activatePendingFriendRequest = (myFriendToken, myName, otherFriendToken) => {
-    const db = getDatabase();
 
-    update(ref(db, myFriendToken + '/friends/'), {
-        pendingFriendRequest: {
-            status: 'pending',
-            friendToken: otherFriendToken
-        }
-    }).then(() => {
-        console.log('activated');
-    })
-
-    update(ref(db, otherFriendToken + '/friends/'), {
-        pendingFriendRequest: {
-            status: 'needsAction',
-            username: myName,
-            friendToken: myFriendToken
-        }
-    }).then(() => {
-        console.log('activated');
-    })
-
-}
-
-export const addUsersAsFriends = (otherFriendToken, loc, username, myFriendToken) => {
+export const addFriend = async (otherFriendToken, loc, username, myFriendToken) => {
     const db = getDatabase();
 
     const newRef = ref(db, otherFriendToken + '/friends/');
@@ -57,39 +68,32 @@ export const addUsersAsFriends = (otherFriendToken, loc, username, myFriendToken
     }
 
     const newPostRef = push(newRef);
-    set(newPostRef, upload).then(() => {
-        console.log('added One Friend');
-    })
-}
+    await set(newPostRef, upload);
 
-/**
- * UPLOADING CURRENT DATA
- */
-
-export const uploadCurrentLoc = ((friendToken, loc, username) => {
-
-    const db = getDatabase();
-    const dbRef = ref(db, friendToken + '/friends/');
-
-    const upload = {
-        latLng: loc,
-        name: username
-    }
-
-    const newPostRef = push(dbRef);
-    set(newPostRef, upload).then(() => {
-        console.log('update successful');
-    });
-
-
-    //updating
+     //updating
     // update(newPostRef, upload).then(() => {
     //     console.log('update successful');
     // });
     
+}
 
-    
-})
+export const getPendingFriendRequestData = async (friendToken) => {
+    const db = getDatabase();
+    const dbRef = ref(db);
+
+    const snapshot = await get(child(dbRef, friendToken + '/pendingFriendRequest'));
+
+    return snapshot.val();
+}
+
+export const resetMyPendingFriendRequest = (friendToken) => {
+    const db = getDatabase();
+    update(ref(db, friendToken), {
+        pendingFriendRequest: {
+            status: 'null'
+        }
+    })
+}
 
 /*
 
@@ -97,70 +101,84 @@ export const uploadCurrentLoc = ((friendToken, loc, username) => {
 
 */
 
-export const loadDatabaseData = createAsyncThunk('realtimeDatabase/loadDatabaseData', async(userId) => {
+export const getCurrentLocation = createAsyncThunk('realtimeDatabase/getCurrentLocation', async() => {
+    const { status } = await requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setErrorMsg('Permission to access location was denied');
+      return;
+    }
+
+    const location = await getCurrentPositionAsync({});
+    
+    const data = {
+        loc:{
+            latitude: location.coords.latitude.toFixed(3),
+            longitude: location.coords.longitude.toFixed(3),
+        }
+    }
+
+    return data;
+})
+
+export const getFriendsLocation = createAsyncThunk('realtimeDatabase/getFriendsLocation', async(friendToken) => {
     const db = getDatabase();
     const dbRef = ref(db);
 
-    const snapshot = await get(child(dbRef, userId.substring(0,6) + '/friends'));
+    const snapshot = await get(child(dbRef, friendToken + '/friends/'));
 
     const parsedLocations = [];
-    let friendToken = "";
 
     //Checking if user exists
     if(snapshot.exists()){
         //going through each child
         snapshot.forEach((child) => {
-            switch(child.key){
-                case "friendToken":
-                    friendToken = child.val();
-                    break;
-                default: 
-                    //going through friend user object
-                    let user = {};
-                    child.forEach((grandChild) => {
-                        switch(grandChild.key){
-                            case "name":
-                                user["name"] = grandChild.val();
-                                break;
-                            default: 
-                                //going through users latLng Object
-                                const retreivedLoc = {};
-                                grandChild.forEach((latLng) => {
-                                    const val = parseFloat(latLng.val());
-                                    const key = latLng.key;
-                                    retreivedLoc[key + ""] = val;
-                                })
-                                user["latLng"] = retreivedLoc;
-                                break;
-                        }
-                    })
-                    parsedLocations.push(user);
-                    break;
-            }
+            let user = {};
+            child.forEach((grandChild) => {
+                switch(grandChild.key){
+                    case "name":
+                        user["name"] = grandChild.val();
+                        break;
+                    default: 
+                        //going through users latLng Object
+                        const retreivedLoc = {};
+                        grandChild.forEach((latLng) => {
+                            const val = parseFloat(latLng.val());
+                            const key = latLng.key;
+                            retreivedLoc[key + ""] = val;
+                        })
+                        user["latLng"] = retreivedLoc;
+                        break;
+                }
+            })
+            parsedLocations.push(user);
         })
     }
     const data = {
         friends: parsedLocations,
-        isLive: true,
-        friendToken: friendToken
     }
     return data;
 })
-
 /**
  * NEW USER REGISTRATION IN RTDB
  */
 
 export const newUserRLDB = (userId) => {
     const db = getDatabase();
-    const dbRef = ref(db);
-    get(child(dbRef,userId.substring(0,6) + '/friends')).then((snapshot) => {
-        if(!snapshot.exists()){
-            set(ref(db, userId.substring(0,6) + '/friends'), {
-                friendToken: userId.substring(0,6) 
-            })
+    set(ref(db, userId.substring(0,6)), {
+        friendToken: userId.substring(0,6),
+        pendingFriendRequest: {
+            status: 'null'
         }
-    });
+    })
+}
+
+export const checkIfNewUser = async(userId) => {
+    const db = getDatabase();
+    const dbRef = ref(db);
+
+    const snapshot = await get(child(dbRef, userId.substring(0,6)));
+
+    return snapshot.exists();
 }
 
 /**
@@ -172,36 +190,52 @@ const initialState = {
     isLive: false,
     loc: {},
     friendToken: null,
+    pendingFriendStatus: null,
+    pendingFriendToken: null,
+    pendingFriendName: null,
+    loadPendingFriendStatus: true,
 }
 
 const RTDatabaseSlice = createSlice({
     name: 'realtimeDatabase',
     initialState,
     reducers: {
-        setFriendsLocation: (state,action) => {
-            state.friendsLocation = action.payload.friends;
-            state.isLive = action.payload.isLive;
-            state.friendToken = action.payload.friendToken;
+        setFriendToken: (state, action) => {
+            state.friendToken = action.payload.friendToken
         },
-        setCurrentLocation: (state, action) => {
-            state.loc = action.payload.loc;
-        }
+        setPendingFriend: (state, action) => {
+            state.pendingFriendStatus = action.payload.pendingFriendStatus;
+            state.pendingFriendToken = action.payload.pendingFriendToken;
+            state.pendingFriendName = action.payload.pendingFriendName;
+            state.loadPendingFriendStatus = action.payload.loadPendingFriendStatus;
+        },
+        resetPendingFriend: (state) => {
+            state.pendingFriendStatus = null;
+            state.pendingFriendToken = null;
+            state.pendingFriendName = null;
+            state.loadPendingFriendStatus = true;
+        },
     },
     extraReducers: (builder) =>  {
-        builder.addCase(loadDatabaseData.fulfilled, (state,action) => {
+        builder.addCase(getFriendsLocation.fulfilled, (state,action) => {
             state.friendsLocation = action.payload.friends;
-            state.isLive = action.payload.isLive;
-            state.friendToken = action.payload.friendToken;
+        })
+        builder.addCase(getCurrentLocation.fulfilled, (state,action) => {
+            state.loc = action.payload.loc;
         })
     }
     
 });
 
-export const { setFriendsLocation, setCurrentLocation} = RTDatabaseSlice.actions;
+export const { setFriendToken, setCurrentLocation, setPendingFriend, resetPendingFriend} = RTDatabaseSlice.actions;
 
 export const selectCurrentLocation = (state) => state.realtimeDatabase.loc;
 export const selectFriendsLocation = (state) => state.realtimeDatabase.friendsLocation;
 export const selectFriendToken = (state) => state.realtimeDatabase.friendToken;
 export const selectIsLive = (state) => state.realtimeDatabase.isLive;
+export const selectPendingFriendStatus = (state) => state.realtimeDatabase.pendingFriendStatus;
+export const selectPendingFriendToken = (state) => state.realtimeDatabase.pendingFriendToken;
+export const selectPendingFriendName = (state) => state.realtimeDatabase.pendingFriendName;
+export const selectLoadPendingFriendStatus = (state) => state.realtimeDatabase.loadPendingFriendStatus;
 
 export default RTDatabaseSlice.reducer;

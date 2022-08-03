@@ -1,30 +1,17 @@
 //react imports
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View, Text, Button} from "react-native";
-import { TextInput } from "react-native";
-import { Formik } from "formik";
 //firebase imports
 import { getAuth, signOut } from 'firebase/auth';
 //redux imports
 import { useDispatch } from 'react-redux/';
 import { setSignOut } from '../redux/authSlice';
-import { saveUsername, setUsername } from "../redux/firestoreSlice";
 
-export const ProfilePage = ({navigation, username, userToken, profilePicUrl, friendToken}) => {
+export const ProfilePage = ({navigation, username, userToken, friendToken}) => {
 
   const auth = getAuth();
 
   const dispatch = useDispatch();
-
-
-  const storeUsername =  (name) => {
-    const data = {
-      isLoaded: false,
-      username: name
-    }
-    dispatch(setUsername(data));
-    saveUsername(userToken, name);
-  }  
  
   const signUserOut = () => {
     signOut(auth).then(() => {
@@ -40,15 +27,6 @@ export const ProfilePage = ({navigation, username, userToken, profilePicUrl, fri
         <Text>Profile</Text>
         <Text>{username}</Text>
         <Button title = "signOut" onPress={signUserOut}></Button>
-        <Formik initialValues={{username: ''}} onSubmit={values => storeUsername(values.username)}>
-          {({handleChange, handleSubmit, values}) => (
-            <View>
-            <Text>Please enter username</Text>
-            <TextInput placeholder="Username" onChangeText={handleChange('username')} value = {values.username}></TextInput>
-            <Button title = "Store username" onPress={handleSubmit}></Button>
-          </View>
-          )}
-        </Formik>
         <Text>Friend Token</Text>
         <Text>{friendToken}</Text>
       </View>

@@ -9,8 +9,8 @@ import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import React, {useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux/';
 import { setSignIn } from '../redux/authSlice';
-import { getUsername, newUserDoc } from '../redux/firestoreSlice';
-import { loadDatabaseData, newUserRLDB } from '../redux/RTDatabseSlice';
+import { getUsername } from '../redux/firestoreSlice';
+import { checkIfNewUser, getCurrentLocation, getFriendsLocation, newUserRLDB, setFriendToken } from '../redux/RTDatabseSlice';
 
 
 export const SignUpPage = ({navigation}) => {
@@ -25,10 +25,6 @@ export const SignUpPage = ({navigation}) => {
 
     const app = getApp();
     const auth = getAuth();
-
-    function goToLanding(){
-        navigation.goBack();
-    }
     
     const sendVerification = async(num) => {
         try{
@@ -38,7 +34,7 @@ export const SignUpPage = ({navigation}) => {
                 setVerificationId(verificationId);
             });
         }catch(error){
-            console.log(error);
+            alert('Please enter a valid phone number')
         };
     };
 
@@ -49,25 +45,34 @@ export const SignUpPage = ({navigation}) => {
                 id,
                 code
               );
-              await signInWithCredential(auth, credential).then((credential) =>{
-                const user = {
-                    isLoggedIn: true,
-                    userToken: credential.user.uid + ""
-                };
+            await signInWithCredential(auth, credential).then((credential) =>{
 
-                newUserRLDB(credential.user.uid);
-                newUserDoc(credential.user.uid);
+                checkIfNewUser(credential.user.uid).then((userExists) => {
+                    if(userExists){
+                        dispatch(getFriendsLocation(credential.user.uid.substring(0,6)));
+                        dispatch(setFriendToken({friendToken: credential.user.uid.substring(0,6)}))
+                        dispatch(getUsername(credential.user.uid));
+                        dispatch(getCurrentLocation());
+    
+                    }else{
+                        newUserRLDB(credential.user.uid);
+                        dispatch(setFriendToken({
+                            friendToken: credential.user.uid.substring(0,6)
+                        }))
+                    }
 
-                dispatch(loadDatabaseData(credential.user.uid));
-                dispatch(getUsername(credential.user.uid));
-
-                dispatch(setSignIn(user));
-              });
+                    const user = {
+                        isLoggedIn: true,
+                        userToken: credential.user.uid,
+                        newUser: !userExists
+                    };
+                    dispatch(setSignIn(user));
+                })
+            });
         }catch(error){
-            console.log(error);
+            alert('Invalid Verification Code');
         };
     };
-
     
     useEffect(() => {
         if(phoneNumber.length == 10){
@@ -84,8 +89,7 @@ export const SignUpPage = ({navigation}) => {
     return(
         <View style={styles.container}>
             <StatusBar></StatusBar>
-            <Text>Sign Up</Text>
-            <Button title="GoBack"onPress={goToLanding}></Button>
+            <Text style = {styles.text}>Your Phone Number</Text>
             <FirebaseRecaptchaVerifierModal ref={recaptchaVerifier} firebaseConfig={app.options}></FirebaseRecaptchaVerifierModal>
 
             <Text>Enter Phone number</Text>
@@ -105,4 +109,7 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
     },
+    text: {
+        fontFamily: 'TextFont'
+    }
   });
