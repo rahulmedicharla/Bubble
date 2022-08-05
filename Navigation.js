@@ -8,17 +8,25 @@ import { NearYouPage } from './views/NearYou';
 import { SignUpPage } from './views/SignUp';
 import { LandingPage } from './views/Landing';
 import { ProfilePage } from './views/Profile';
+import { NewUserSetupPage } from './views/NewUserSetup';
+import { LoadingPage } from './views/Loading';
+import { AntDesign } from '@expo/vector-icons';
 //redux imports
-import { selectIsLoggedIn, selectNewUser, selectUserToken } from './redux/authSlice';
+import { selectFontIsLoaded, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded } from './redux/authSlice';
 import { useSelector } from 'react-redux/';
 import { selectUsername } from './redux/firestoreSlice';
-import { selectCurrentLocation, selectFriendsLocation, selectFriendToken, selectIsLive, selectLoadPendingFriendStatus, selectPendingFriendName, selectPendingFriendStatus, selectPendingFriendToken } from './redux/RTDatabseSlice';
+import { selectCurrentLocation, selectCurrentLocationIsLoaded, selectFriendsLocation, selectFriendToken, selectIsLive, 
+    selectPendingFriendName, selectPendingFriendStatus, selectPendingFriendToken } from './redux/RTDatabseSlice';
+//font imports
 import { useEffect } from 'react';
-import { NewUserSetupPage } from './views/NewUserSetup';
-import { AntDesign } from '@expo/vector-icons';
+import * as SplashScreen from 'expo-splash-screen';
+import { useDispatch } from 'react-redux';
+import * as Font from 'expo-font';
+import { HeaderRightButton } from './views/headerButtons/HeaderRight';
 
-const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+SplashScreen.preventAutoHideAsync();
 
 export default function AppRoute(){
 
@@ -26,6 +34,8 @@ export default function AppRoute(){
     const isLoggedIn = useSelector(selectIsLoggedIn);
     const userToken = useSelector(selectUserToken);
     const newUser = useSelector(selectNewUser);
+    const fontIsLoaded = useSelector(selectFontIsLoaded);
+    const verificationCode = useSelector(selectVerificationCode);
 
     //firestore slice variables
     const username = useSelector(selectUsername);
@@ -35,59 +45,90 @@ export default function AppRoute(){
     const friendToken = useSelector(selectFriendToken);
     const isLive = useSelector(selectIsLive);
     const currentLoc = useSelector(selectCurrentLocation);
+    const currentLocIsLoaded = useSelector(selectCurrentLocationIsLoaded);
 
     const pendingFriendStatus = useSelector(selectPendingFriendStatus);
     const pendingFriendName = useSelector(selectPendingFriendName);
     const pendingFriendToken = useSelector(selectPendingFriendToken);
-    const loadPendingFriendStatus = useSelector(selectLoadPendingFriendStatus);
+
+    const dispatch = useDispatch();
+
+    const loadFonts = async() => {
+        await Font.loadAsync({
+            'TextFont': require('./assets/GloriaHallelujah-Regular.ttf')
+        })
+    }
+
+    useEffect(() => {
+        loadFonts().then(() => {
+            SplashScreen.hideAsync();
+            dispatch(setFontIsLoaded({fontIsLoaded: true}))
+        })
+    }, [])
+
+    if(!fontIsLoaded){
+        return null;
+    }
 
     return(
         <NavigationContainer>
             {isLoggedIn == false ? (
-                <Stack.Navigator screenOptions={{ tabBarStyle: { display: "none"}}}>
+                <Stack.Navigator >
 
                     <Stack.Screen name = "Landing" options={{headerShown: false}} children={(props) => <LandingPage {...props}
                         ></LandingPage> }>
                     </Stack.Screen>
                     <Stack.Screen name = "SignUp" options={{headerBackTitleVisible :false}} children={(props) => <SignUpPage {...props}
+                        verificationCode = {verificationCode}
                         ></SignUpPage>}>
                     </Stack.Screen>
 
                 </Stack.Navigator>
 
             ) : (
-                <Tab.Navigator screenOptions={{headerShown: false}}>
+                <Stack.Navigator>
                     {newUser ? (
-                        <Tab.Screen name="NewUserSetup" children={(props) => <NewUserSetupPage {...props}
+                        <Stack.Screen name="NewUserSetup" children={(props) => <NewUserSetupPage {...props}
                             userToken = {userToken}></NewUserSetupPage>}>
-                        </Tab.Screen>
+                        </Stack.Screen>
                     ):(
-                        <Tab.Group>
-                            <Tab.Screen name="Home" children={(props) => <HomePage {...props} 
-                                username = {username}></HomePage>}>
-                            </Tab.Screen>
-                            
-                            <Tab.Screen name="NearYou" children={(props) => <NearYouPage {...props} 
-                                friendsLocation = {friendsLocation}
-                                friendToken = {friendToken}
-                                isLive = {isLive}
-                                username = {username}
-                                pendingFriendStatus = {pendingFriendStatus}
-                                pendingFriendName = {pendingFriendName}
-                                pendingFriendToken = {pendingFriendToken}
-                                loadPendingFriendStatus = {loadPendingFriendStatus}
-                                currentLoc = {currentLoc} ></NearYouPage>}>
-                            </Tab.Screen>
+                        <Stack.Group>
+                            {currentLocIsLoaded ? (
+                                <Stack.Group>
+                                    <Stack.Screen name="NearYou" options={({navigation}) => ({ 
+                                        //screen header options
+                                        headerTransparent: true,
+                                        headerRight: () => <HeaderRightButton navigation={navigation}></HeaderRightButton>})}
+                                        //children props
+                                        children={(props) => <NearYouPage {...props} 
+                                            userToken = {userToken}
+                                            friendsLocation = {friendsLocation}
+                                            friendToken = {friendToken}
+                                            isLive = {isLive}
+                                            username = {username}
+                                            pendingFriendStatus = {pendingFriendStatus}
+                                            pendingFriendName = {pendingFriendName}
+                                            pendingFriendToken = {pendingFriendToken}
+                                            currentLoc = {currentLoc} ></NearYouPage>}>
+                                    </Stack.Screen>
 
-                            <Tab.Screen name="Profile" children={(props) => <ProfilePage {...props}
-                                username = {username}
-                                userToken = {userToken}
-                                friendToken = {friendToken}></ProfilePage>}>
-                            </Tab.Screen>
+                                    <Stack.Screen name="Home" children={(props) => <HomePage {...props} 
+                                        username = {username}></HomePage>}>
+                                    </Stack.Screen>
 
-                        </Tab.Group>
+                                    <Stack.Screen name="Profile" options={{headerBackTitleVisible :false}} children={(props) => <ProfilePage {...props}
+                                        username = {username}
+                                        userToken = {userToken}
+                                        friendToken = {friendToken}></ProfilePage>}>
+                                    </Stack.Screen>
+                                </Stack.Group>
+                            ):(
+                                <Stack.Screen name = "LoadingPage" options = {{headerShown: false}} children = {(props) => <LoadingPage {...props}>
+                                    </LoadingPage>}></Stack.Screen>
+                            )}
+                        </Stack.Group>
                     )}
-                </Tab.Navigator>
+                </Stack.Navigator>
             )}
         </NavigationContainer>
     );

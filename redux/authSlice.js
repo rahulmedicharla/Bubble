@@ -4,6 +4,9 @@ const initialState = {
     isLoggedIn: false,
     userToken: null,
     newUser: null,
+    fontIsLoaded: false,
+    verificationCode: null,
+
 }
 
 const authSlice = createSlice({
@@ -22,14 +25,22 @@ const authSlice = createSlice({
         },
         setNewUserFalse: (state) => {
             state.newUser = false;
+        },
+        setFontIsLoaded: (state, action) => {
+            state.fontIsLoaded = action.payload.fontIsLoaded
+        },
+        setVerificationCode: (state, action) => {
+            state.verificationCode = action.payload.verificationCode;
         }
     }
 });
 
-export const { setSignIn, setSignOut, setNewUserFalse } = authSlice.actions;
+export const { setSignIn, setSignOut, setNewUserFalse, setFontIsLoaded, setVerificationCode } = authSlice.actions;
 
 export const selectIsLoggedIn = (state) => state.userAuth.isLoggedIn;
 export const selectUserToken = (state) => state.userAuth.userToken;
 export const selectNewUser = (state) => state.userAuth.newUser;
+export const selectFontIsLoaded = (state) => state.userAuth.fontIsLoaded;
+export const selectVerificationCode = (state) => state.userAuth.verificationCode;
 
 export default authSlice.reducer;

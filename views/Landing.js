@@ -1,30 +1,12 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, Text, Button, Image, TouchableOpacity} from "react-native";
-import * as Font from 'expo-font';
-import { useEffect, useState } from "react";
-import * as SplashScreen from 'expo-splash-screen';
-import loadFonts from '../customFont';
+import { StyleSheet, View, Text, Image, TouchableOpacity} from "react-native";
 
 export const LandingPage = ({navigation}) => {
-
-  const [fontLoaded, setFontLoaded] = useState(false);
 
   const goToSignUp = () => {
     navigation.navigate('SignUp');
   }
-
-  useEffect(() => {
-    SplashScreen.preventAutoHideAsync();
-    loadFonts().then(() => {
-      SplashScreen.hideAsync();
-      setFontLoaded(true);
-    })
-  },[])
-
-  if(!fontLoaded){
-    return null;
-  }
-
+  
   return(
     <View style={styles.container}>
       <StatusBar></StatusBar>
@@ -55,18 +37,14 @@ const styles = StyleSheet.create({
     },
     buttonBackground: {
       backgroundColor : '#58C4CB',
-      marginRight:40,
-      marginLeft:40,
-      marginTop: 80,
-      paddingTop: 10,
-      paddingBottom:10,
+      marginTop: 150,
       borderRadius:10,
       borderColor: '#58C4CB'
     },
     buttonText: {
       textAlign: 'center',
-      paddingLeft : 100,
-      paddingRight : 100,
+      paddingLeft : 130,
+      paddingRight : 130,
       marginTop: 9,
       marginBottom: 9,
       fontSize: 20,

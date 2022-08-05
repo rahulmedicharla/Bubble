@@ -1,7 +1,7 @@
 //react imports
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Dimensions, Button, Text, TextInput } from 'react-native';
+import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Formik } from "formik";
 import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
@@ -10,12 +10,13 @@ import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
 import { addFriend, getFriendsLocation, getPendingFriendRequestData, resetMyPendingFriendRequest, resetPendingFriend, setPendingFriend, updateStatusToFulfilled, validateFriendToken } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
 import { getDatabase, onValue, ref } from 'firebase/database';
+import { addFriendToList, addToFriendsList } from '../redux/firestoreSlice';
 
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
 
-export const NearYouPage = ({navigation, friendsLocation, friendToken, isLive, 
-  username, pendingFriendStatus, pendingFriendName, pendingFriendToken, loadPendingFriendStatus,  currentLoc}) => {
+export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken, isLive, 
+  username, pendingFriendStatus, pendingFriendName, pendingFriendToken,  currentLoc}) => {
 
   const db = getDatabase();
 
@@ -39,49 +40,38 @@ export const NearYouPage = ({navigation, friendsLocation, friendToken, isLive,
   */
   const pendingFriendRequest = ref(db, friendToken + '/pendingFriendRequest/status');
   onValue(pendingFriendRequest, (snapshot) => {
-    if(snapshot.val() == 'fulfilled' && pendingFriendToken){
-      addFriend(pendingFriendToken, currentLoc, username, friendToken).then(() => {
-        resetMyPendingFriendRequest(friendToken);
-        dispatch(resetPendingFriend());
-        dispatch(getFriendsLocation(friendToken));
-      })
-
-    }else if(loadPendingFriendStatus){
-      switch(snapshot.val()){
-        case "pending":
-
-          console.log(loadPendingFriendStatus + '**pending');
+    switch(snapshot.val()){
+      case 'pending':
           getPendingFriendRequestData(friendToken).then((data) => {
             dispatch(setPendingFriend({
               pendingFriendStatus: data.status,
               pendingFriendToken: data.friendToken,
               pendingFriendName: data.friendToken,
-              loadPendingFriendStatus: false,
             }))
           })
-
-          break;
-        case "needsAction":
-
-          console.log(loadPendingFriendStatus + '**needsAction');
+        break;
+      case 'needsAction':
           getPendingFriendRequestData(friendToken).then((data) => {
             dispatch(setPendingFriend({
               pendingFriendStatus: data.status,
               pendingFriendToken: data.friendToken,
               pendingFriendName: data.username,
-              loadPendingFriendStatus: false,
             }))
           })
-
-          break;
-        default:
-          
-          console.log('**default');
-
-          break;
-      } 
-
-    }else{}
+        break;
+      case 'fulfilled':
+        if(pendingFriendToken){
+          addFriend(pendingFriendToken, currentLoc, username, friendToken).then(() => {
+            addFriendToList(userToken, pendingFriendToken);
+            resetMyPendingFriendRequest(friendToken);
+            dispatch(resetPendingFriend());
+            dispatch(getFriendsLocation(friendToken));
+          })
+        }
+        break;
+      default: 
+        break;
+    }
   })
 
 
@@ -97,7 +87,7 @@ export const NearYouPage = ({navigation, friendsLocation, friendToken, isLive,
         longitude: currentLoc.longitude,
         latitudeDelta: .01,
         longitudeDelta: .01,
-      })
+      }, 1000)
     }
   }, [currentLoc])
 
@@ -146,4 +136,9 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width, 
     height: Dimensions.get('window').height,
   },
+  overlay: {
+    position: 'absolute',
+    bottom: 50,
+    backgroundColor: 'rgba(255, 255, 255, 1)',
+  }
 });
