@@ -14,9 +14,10 @@ import { AntDesign } from '@expo/vector-icons';
 //redux imports
 import { selectFontIsLoaded, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded } from './redux/authSlice';
 import { useSelector } from 'react-redux/';
-import { selectUsername } from './redux/firestoreSlice';
-import { selectCurrentLocation, selectCurrentLocationIsLoaded, selectFriendsLocation, selectFriendToken, selectIsLive, 
-    selectPendingFriendName, selectPendingFriendStatus, selectPendingFriendToken } from './redux/RTDatabseSlice';
+import { selectFriendsList, selectUsername } from './redux/firestoreSlice';
+import { selectCurrentLocation, selectCurrentLocationIsLoaded, selectFriendsLocation, selectFriendToken, 
+    selectLoadAddFriends, 
+    selectLoadFriendsLocation, selectPendingFriendName, selectPendingFriendStatus, selectPendingFriendToken } from './redux/RTDatabseSlice';
 //font imports
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
@@ -39,14 +40,16 @@ export default function AppRoute(){
 
     //firestore slice variables
     const username = useSelector(selectUsername);
+    const friendsList = useSelector(selectFriendsList);
 
     //RTDB slice variables
     const friendsLocation = useSelector(selectFriendsLocation);
     const friendToken = useSelector(selectFriendToken);
-    const isLive = useSelector(selectIsLive);
+    const loadFriendsLocation = useSelector(selectLoadFriendsLocation);
     const currentLoc = useSelector(selectCurrentLocation);
     const currentLocIsLoaded = useSelector(selectCurrentLocationIsLoaded);
 
+    const loadAddFriends = useSelector(selectLoadAddFriends);
     const pendingFriendStatus = useSelector(selectPendingFriendStatus);
     const pendingFriendName = useSelector(selectPendingFriendName);
     const pendingFriendToken = useSelector(selectPendingFriendToken);
@@ -104,11 +107,13 @@ export default function AppRoute(){
                                             userToken = {userToken}
                                             friendsLocation = {friendsLocation}
                                             friendToken = {friendToken}
-                                            isLive = {isLive}
+                                            loadFriendsLocation = {loadFriendsLocation}
+                                            loadAddFriends = {loadAddFriends}
                                             username = {username}
                                             pendingFriendStatus = {pendingFriendStatus}
                                             pendingFriendName = {pendingFriendName}
                                             pendingFriendToken = {pendingFriendToken}
+                                            friendsList = {friendsList}
                                             currentLoc = {currentLoc} ></NearYouPage>}>
                                     </Stack.Screen>
 

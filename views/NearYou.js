@@ -10,13 +10,13 @@ import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
 import { addFriend, getFriendsLocation, getPendingFriendRequestData, resetMyPendingFriendRequest, resetPendingFriend, setPendingFriend, updateStatusToFulfilled, validateFriendToken } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
 import { getDatabase, onValue, ref } from 'firebase/database';
-import { addFriendToList, addToFriendsList } from '../redux/firestoreSlice';
+import { addFriendToList, addToFriendsList, getFriendsList } from '../redux/firestoreSlice';
 
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
 
-export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken, isLive, 
-  username, pendingFriendStatus, pendingFriendName, pendingFriendToken,  currentLoc}) => {
+export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken, loadFriendsLocation, loadAddFriends,
+  username, pendingFriendStatus, pendingFriendName, pendingFriendToken, friendsList, currentLoc}) => {
 
   const db = getDatabase();
 
@@ -38,6 +38,15 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
       EVENT LISTENERS FOR PENDING FRIEND
   
   */
+
+  
+  useEffect(() => {
+    if(loadFriendsLocation){
+      dispatch(getFriendsList(userToken));
+      dispatch(getFriendsLocation(friendToken));
+    }
+  }, [loadFriendsLocation])
+
   const pendingFriendRequest = ref(db, friendToken + '/pendingFriendRequest/status');
   onValue(pendingFriendRequest, (snapshot) => {
     switch(snapshot.val()){
@@ -60,12 +69,12 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
           })
         break;
       case 'fulfilled':
-        if(pendingFriendToken){
+        if(pendingFriendToken && loadAddFriends){
           addFriend(pendingFriendToken, currentLoc, username, friendToken).then(() => {
             addFriendToList(userToken, pendingFriendToken);
-            resetMyPendingFriendRequest(friendToken);
-            dispatch(resetPendingFriend());
-            dispatch(getFriendsLocation(friendToken));
+            resetMyPendingFriendRequest(friendToken).then(() => {
+              dispatch(resetPendingFriend());
+            });   
           })
         }
         break;
@@ -80,7 +89,6 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
    */
 
   useEffect(() => {
-    console.log(currentLoc.latitude);
     if(currentLoc){
       map.current.animateToRegion({
         latitude: currentLoc.latitude,
@@ -90,6 +98,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
       }, 1000)
     }
   }, [currentLoc])
+
 
   return(
       <View style={styles.container}>
@@ -101,7 +110,11 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
         </MapView>
         <BottomSheet ref={sheetRef} snapPoints={snapPoints}>
           <BottomSheetView>
-            <Formik initialValues={{oFriendToken: ''}} onSubmit={values => validateFriendToken(username, friendToken, values.oFriendToken)}>
+            <Text>Friends</Text>
+            {friendsList.map(friend => {
+              return (<Text key={friend}>{friend}</Text>)
+            })}
+            <Formik initialValues={{oFriendToken: ''}} onSubmit={values => validateFriendToken(username, friendToken, values.oFriendToken, friendsList)}>
             {({handleChange, handleSubmit, values}) => (
               <View>
                 <Text>Add another users friendToken</Text>

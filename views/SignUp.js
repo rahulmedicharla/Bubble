@@ -9,12 +9,13 @@ import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import React, {useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux/';
 import { setSignIn, setVerificationCode } from '../redux/authSlice';
-import { getUsername } from '../redux/firestoreSlice';
+import { getFriendsList, getUsername } from '../redux/firestoreSlice';
 import { checkIfNewUser, getCurrentLocation, getFriendsLocation, newUserRLDB, setFriendToken } from '../redux/RTDatabseSlice';
 //special imports
 import { Formik } from 'formik';
 import PhoneInput from 'react-native-phone-number-input';
 import { CodeField, useBlurOnFulfill, useClearByFocusCell, Cursor } from 'react-native-confirmation-code-field';
+
 
 export const SignUpPage = ({navigation, verificationCode}) => {
         
@@ -33,11 +34,10 @@ export const SignUpPage = ({navigation, verificationCode}) => {
         }
     }, [value])
 
+    const auth = getAuth();
+    const app = getApp();
 
     const dispatch = useDispatch();
-
-    const app = getApp();
-    const auth = getAuth();
     
     const sendVerification = async(num) => {
         try{
@@ -63,7 +63,6 @@ export const SignUpPage = ({navigation, verificationCode}) => {
 
                 checkIfNewUser(credential.user.uid).then((userExists) => {
                     if(userExists){
-                        dispatch(getFriendsLocation(credential.user.uid.substring(0,6)));
                         dispatch(setFriendToken({friendToken: credential.user.uid.substring(0,6)}))
                         dispatch(getUsername(credential.user.uid));
                         dispatch(getCurrentLocation());
@@ -113,7 +112,6 @@ export const SignUpPage = ({navigation, verificationCode}) => {
                     <CodeField
                         ref={ref}
                         {...props}
-                        // Use `caretHidden={false}` when users can't paste a text value, because context menu doesn't appear
                         value={value}
                         onChangeText={setValue}
                         cellCount={6}

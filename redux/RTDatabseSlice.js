@@ -8,15 +8,15 @@ import { child, get, getDatabase, push, ref, set, update } from 'firebase/databa
 
 */
 
-export const validateFriendToken = (myName, myFriendToken, otherFriendToken) => {
+export const validateFriendToken = (myName, myFriendToken, otherFriendToken, friendsList) => {
     if(otherFriendToken != ''){
         const db = getDatabase();
         const dbRef = ref(db);
         get(child(dbRef, otherFriendToken)).then((snapshot) => {
-        if(snapshot.exists()){
+        if(snapshot.exists() && !friendsList.includes(otherFriendToken)){
             activeFriendRequest(myName, myFriendToken, otherFriendToken);
         }else{
-            alert('invalid Token');
+            alert('invalid Token or already friends with user');
         }
         })
     }else{
@@ -90,9 +90,9 @@ export const getPendingFriendRequestData = async (friendToken) => {
     return snapshot.val();
 }
 
-export const resetMyPendingFriendRequest = (friendToken) => {
+export const resetMyPendingFriendRequest = async (friendToken) => {
     const db = getDatabase();
-    update(ref(db, friendToken), {
+    await update(ref(db, friendToken), {
         pendingFriendRequest: {
             status: 'null'
         }
@@ -159,6 +159,7 @@ export const getFriendsLocation = createAsyncThunk('realtimeDatabase/getFriendsL
     }
     const data = {
         friends: parsedLocations,
+        loadFriendsLocation: false
     }
     return data;
 })
@@ -191,7 +192,8 @@ export const checkIfNewUser = async(userId) => {
 
 const initialState = {
     friendsLocation: [],
-    isLive: false,
+    loadFriendsLocation: true,
+    loadAddFriends:true,
     loc: {},
     currentLocIsLoaded: false,
     friendToken: null,
@@ -211,16 +213,24 @@ const RTDatabaseSlice = createSlice({
             state.pendingFriendStatus = action.payload.pendingFriendStatus;
             state.pendingFriendToken = action.payload.pendingFriendToken;
             state.pendingFriendName = action.payload.pendingFriendName;
+            state.loadFriendsLocation = false;
+            state.loadAddFriends = true;
         },
         resetPendingFriend: (state) => {
             state.pendingFriendStatus = null;
             state.pendingFriendToken = null;
             state.pendingFriendName = null;
+            state.loadFriendsLocation = true;
+            state.loadAddFriends = false;
         },
+        setLoadFriendsLocation: (state, action) => {
+            state.loadFriendsLocation = action.payload.loadFriendsLocation;
+        }
     },
     extraReducers: (builder) =>  {
         builder.addCase(getFriendsLocation.fulfilled, (state,action) => {
             state.friendsLocation = action.payload.friends;
+            state.loadFriendsLocation = action.payload.loadFriendsLocation;
         })
         builder.addCase(getCurrentLocation.fulfilled, (state,action) => {
             state.loc = action.payload.loc;
@@ -230,13 +240,14 @@ const RTDatabaseSlice = createSlice({
     
 });
 
-export const { setFriendToken, setCurrentLocation, setPendingFriend, resetPendingFriend} = RTDatabaseSlice.actions;
+export const { setFriendToken, setCurrentLocation, setPendingFriend, resetPendingFriend, setLoadFriendsLocation} = RTDatabaseSlice.actions;
 
 export const selectCurrentLocation = (state) => state.realtimeDatabase.loc;
 export const selectCurrentLocationIsLoaded = (state) => state.realtimeDatabase.currentLocIsLoaded;
 export const selectFriendsLocation = (state) => state.realtimeDatabase.friendsLocation;
 export const selectFriendToken = (state) => state.realtimeDatabase.friendToken;
-export const selectIsLive = (state) => state.realtimeDatabase.isLive;
+export const selectLoadFriendsLocation = (state) => state.realtimeDatabase.loadFriendsLocation;
+export const selectLoadAddFriends = (state) => state.realtimeDatabase.loadAddFriends;
 export const selectPendingFriendStatus = (state) => state.realtimeDatabase.pendingFriendStatus;
 export const selectPendingFriendToken = (state) => state.realtimeDatabase.pendingFriendToken;
 export const selectPendingFriendName = (state) => state.realtimeDatabase.pendingFriendName;

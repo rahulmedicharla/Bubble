@@ -22,6 +22,7 @@ const authSlice = createSlice({
             state.userToken = null;
             state.isLoggedIn = false;
             state.newUser = null;
+            state.verificationCode = null;
         },
         setNewUserFalse: (state) => {
             state.newUser = false;
