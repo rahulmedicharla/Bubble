@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer} from '@react-navigation/native';
+import * as Linking from 'expo-linking';
 //importing views
 import { HomePage } from './views/Home';
 import { NearYouPage } from './views/NearYou';
@@ -12,16 +13,20 @@ import { NewUserSetupPage } from './views/NewUserSetup';
 import { LoadingPage } from './views/Loading';
 import { AntDesign } from '@expo/vector-icons';
 //redux imports
-import { selectFontIsLoaded, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded } from './redux/authSlice';
-import { useSelector } from 'react-redux/';
+import { selectFontIsLoaded, selectIsDeepLinkForeground, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded, setIsDeepLinkForeground } from './redux/authSlice';
+import { useSelector, useDispatch } from 'react-redux/';
 import { selectFriendsList, selectUsername } from './redux/firestoreSlice';
 import { selectCurrentLocation, selectCurrentLocationIsLoaded, selectFriendsLocation, selectFriendToken, 
     selectLoadAddFriends, 
     selectLoadFriendsLocation, selectPendingFriendName, selectPendingFriendStatus, selectPendingFriendToken } from './redux/RTDatabseSlice';
+import { setSignIn } from "./redux/authSlice";
+import { getUsername } from "./redux/firestoreSlice";
+import { getCurrentLocation, setFriendToken } from "./redux/RTDatabseSlice";
+//firebase imports
+import { getAuth } from 'firebase/auth';
 //font imports
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
-import { useDispatch } from 'react-redux';
 import * as Font from 'expo-font';
 import { HeaderRightButton } from './views/headerButtons/HeaderRight';
 
@@ -30,6 +35,9 @@ const Stack = createStackNavigator();
 SplashScreen.preventAutoHideAsync();
 
 export default function AppRoute(){
+    
+    const dispatch = useDispatch();
+    const auth = getAuth();
 
     //auth slice variables
     const isLoggedIn = useSelector(selectIsLoggedIn);
@@ -37,6 +45,7 @@ export default function AppRoute(){
     const newUser = useSelector(selectNewUser);
     const fontIsLoaded = useSelector(selectFontIsLoaded);
     const verificationCode = useSelector(selectVerificationCode);
+    const isDeepLinkForeground = useSelector(selectIsDeepLinkForeground);
 
     //firestore slice variables
     const username = useSelector(selectUsername);
@@ -52,26 +61,60 @@ export default function AppRoute(){
     const loadAddFriends = useSelector(selectLoadAddFriends);
     const pendingFriendStatus = useSelector(selectPendingFriendStatus);
     const pendingFriendName = useSelector(selectPendingFriendName);
-    const pendingFriendToken = useSelector(selectPendingFriendToken);
-
-    const dispatch = useDispatch();
+    const pendingFriendToken = useSelector(selectPendingFriendToken);8
 
     const loadFonts = async() => {
         await Font.loadAsync({
             'TextFont': require('./assets/GloriaHallelujah-Regular.ttf')
+        }).then(() => {
+            SplashScreen.hideAsync();
+            dispatch(setFontIsLoaded({fontIsLoaded: true}));
         })
+
+    }
+
+    const getInitialUrl = async() => {
+        const initialUrl = await Linking.getInitialURL();
+        if(initialUrl){
+            console.log(Linking.parse(initialUrl));
+        }
     }
 
     useEffect(() => {
-        loadFonts().then(() => {
-            SplashScreen.hideAsync();
-            dispatch(setFontIsLoaded({fontIsLoaded: true}))
+        Linking.addEventListener('url', (e) => {
+            console.log(Linking.parse(e.url))
+            dispatch(setIsDeepLinkForeground({isDeepLinkForeground: true}))
         })
+        if(!isDeepLinkForeground){
+            getInitialUrl();
+        }
+
+        loadFonts();
+
+        return () => {
+            Linking.removeEventListener("url");
+        }
+
     }, [])
 
     if(!fontIsLoaded){
         return null;
     }
+
+    auth.onAuthStateChanged((user) => {
+        if(user && (newUser == null)){
+            dispatch(setFriendToken({friendToken: user.uid.substring(0,6)}))
+            dispatch(getUsername(user.uid));
+            dispatch(getCurrentLocation());
+  
+            const data = {
+            isLoggedIn: true,
+            userToken: user.uid,
+            newUser: false
+            };
+            dispatch(setSignIn(data));
+        }
+    })
 
     return(
         <NavigationContainer>

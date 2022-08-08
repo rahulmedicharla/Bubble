@@ -6,7 +6,7 @@ export const LandingPage = ({navigation}) => {
   const goToSignUp = () => {
     navigation.navigate('SignUp');
   }
-  
+
   return(
     <View style={styles.container}>
       <StatusBar></StatusBar>

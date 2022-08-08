@@ -19,6 +19,9 @@ import { CodeField, useBlurOnFulfill, useClearByFocusCell, Cursor } from 'react-
 
 export const SignUpPage = ({navigation, verificationCode}) => {
         
+    const auth = getAuth();
+    const app = getApp();
+
     const recaptchaVerifier = useRef(null);
     
     const [value, setValue] = useState('');
@@ -33,9 +36,6 @@ export const SignUpPage = ({navigation, verificationCode}) => {
             confirmCode(verificationCode, value);
         }
     }, [value])
-
-    const auth = getAuth();
-    const app = getApp();
 
     const dispatch = useDispatch();
     

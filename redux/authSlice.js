@@ -6,7 +6,7 @@ const initialState = {
     newUser: null,
     fontIsLoaded: false,
     verificationCode: null,
-
+    isDeepLinkForeground: false,
 }
 
 const authSlice = createSlice({
@@ -32,16 +32,20 @@ const authSlice = createSlice({
         },
         setVerificationCode: (state, action) => {
             state.verificationCode = action.payload.verificationCode;
+        },
+        setIsDeepLinkForeground: (state, action) => {
+            state.isDeepLinkForeground = action.payload.isDeepLinkForeground;
         }
     }
 });
 
-export const { setSignIn, setSignOut, setNewUserFalse, setFontIsLoaded, setVerificationCode } = authSlice.actions;
+export const { setSignIn, setSignOut, setNewUserFalse, setFontIsLoaded, setVerificationCode, setIsDeepLinkForeground } = authSlice.actions;
 
 export const selectIsLoggedIn = (state) => state.userAuth.isLoggedIn;
 export const selectUserToken = (state) => state.userAuth.userToken;
 export const selectNewUser = (state) => state.userAuth.newUser;
 export const selectFontIsLoaded = (state) => state.userAuth.fontIsLoaded;
 export const selectVerificationCode = (state) => state.userAuth.verificationCode;
+export const selectIsDeepLinkForeground = (state) => state.userAuth.isDeepLinkForeground;
 
 export default authSlice.reducer;

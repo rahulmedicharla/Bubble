@@ -200,6 +200,7 @@ const initialState = {
     pendingFriendStatus: null,
     pendingFriendToken: null,
     pendingFriendName: null,
+    
 }
 
 const RTDatabaseSlice = createSlice({

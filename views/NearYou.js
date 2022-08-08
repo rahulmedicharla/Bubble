@@ -1,16 +1,21 @@
 //react imports
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity, Share } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Formik } from "formik";
 import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
+import { Ionicons } from '@expo/vector-icons'; 
 
 //redux imports
 import { addFriend, getFriendsLocation, getPendingFriendRequestData, resetMyPendingFriendRequest, resetPendingFriend, setPendingFriend, updateStatusToFulfilled, validateFriendToken } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
 import { getDatabase, onValue, ref } from 'firebase/database';
 import { addFriendToList, addToFriendsList, getFriendsList } from '../redux/firestoreSlice';
+
+//Sharing imports
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
@@ -25,13 +30,23 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
 
   //AddFriends Modal Consts
   const sheetRef = useRef(null);
-  const snapPoints = ["15%", "40%"]
+  const snapPoints = ["50%"];
 
   const dispatch = useDispatch();
 
   const acceptFriendRequest = () => {
     updateStatusToFulfilled(friendToken, pendingFriendToken);
   } 
+
+  const shareFriendToken = (friendToken, username) => {
+    const link = Linking.createURL();
+    Share.share(
+      {
+        message: 'Add Friend Invite',
+        title: 'test, dont know where this will go',
+        url: link
+      })
+  }
 
   /*
   
@@ -108,12 +123,15 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
             return (<Marker title={marker.name} key={marker.name} coordinate={marker.latLng}></Marker>)
           })}
         </MapView>
-        <BottomSheet ref={sheetRef} snapPoints={snapPoints}>
+        <BottomSheet ref={sheetRef} snapPoints={snapPoints} enablePanDownToClose index={-1} >
           <BottomSheetView>
             <Text>Friends</Text>
             {friendsList.map(friend => {
               return (<Text key={friend}>{friend}</Text>)
             })}
+            <TouchableOpacity onPress={shareFriendToken(friendToken, username)}>
+              <MaterialCommunityIcons name="share" size={40} color="black"></MaterialCommunityIcons>
+            </TouchableOpacity>
             <Formik initialValues={{oFriendToken: ''}} onSubmit={values => validateFriendToken(username, friendToken, values.oFriendToken, friendsList)}>
             {({handleChange, handleSubmit, values}) => (
               <View>
@@ -134,6 +152,11 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
             ):null}
           </BottomSheetView>
         </BottomSheet>
+        <View style={styles.footerButton}>
+          <TouchableOpacity onPress={() => {sheetRef.current.expand()}}>
+            <Ionicons name="md-menu" size={40} color="black"></Ionicons>
+          </TouchableOpacity>             
+        </View>
       </View>
   );
 }
@@ -148,10 +171,12 @@ const styles = StyleSheet.create({
   map: {
     width: Dimensions.get('window').width, 
     height: Dimensions.get('window').height,
+    zIndex: -1,
   },
-  overlay: {
+  footerButton: {
     position: 'absolute',
-    bottom: 50,
-    backgroundColor: 'rgba(255, 255, 255, 1)',
+    zIndex: 10,
+    bottom: 30,
+    right: 25
   }
 });
