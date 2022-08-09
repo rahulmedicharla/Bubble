@@ -20,8 +20,6 @@ export const getFriendsList = createAsyncThunk('firestore/getFriendsList', async
     const data = {
         friendsList: list
     }
-
-    console.log('***' + list);
     return data;
 })
 
@@ -65,15 +63,13 @@ export const addFriendToList = async(userId, name) => {
     if(!list){
         await updateDoc(doc(firestore, 'users', userId), {
             friendsList: [name]
-        }).then(() => {
-            console.log("updated");
+        }).then(() => {            
         })
     }else{
         list.push(name);
         await updateDoc(doc(firestore, 'users', userId), {
             friendsList: list
         }).then(() => {
-            console.log("updated");
         })
     }
 }

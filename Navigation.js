@@ -17,8 +17,7 @@ import { selectFontIsLoaded, selectIsDeepLinkForeground, selectIsLoggedIn, selec
 import { useSelector, useDispatch } from 'react-redux/';
 import { selectFriendsList, selectUsername } from './redux/firestoreSlice';
 import { selectCurrentLocation, selectCurrentLocationIsLoaded, selectFriendsLocation, selectFriendToken, 
-    selectLoadAddFriends, 
-    selectLoadFriendsLocation, selectPendingFriendName, selectPendingFriendStatus, selectPendingFriendToken } from './redux/RTDatabseSlice';
+    selectLoadFriendsLocation, selectPendingFriendToken, selectPendingFriendUsername, setPendingFriend} from './redux/RTDatabseSlice';
 import { setSignIn } from "./redux/authSlice";
 import { getUsername } from "./redux/firestoreSlice";
 import { getCurrentLocation, setFriendToken } from "./redux/RTDatabseSlice";
@@ -57,11 +56,8 @@ export default function AppRoute(){
     const loadFriendsLocation = useSelector(selectLoadFriendsLocation);
     const currentLoc = useSelector(selectCurrentLocation);
     const currentLocIsLoaded = useSelector(selectCurrentLocationIsLoaded);
-
-    const loadAddFriends = useSelector(selectLoadAddFriends);
-    const pendingFriendStatus = useSelector(selectPendingFriendStatus);
-    const pendingFriendName = useSelector(selectPendingFriendName);
-    const pendingFriendToken = useSelector(selectPendingFriendToken);8
+    const pendingFriendToken = useSelector(selectPendingFriendToken);
+    const pendingFriendUsername = useSelector(selectPendingFriendUsername);
 
     const loadFonts = async() => {
         await Font.loadAsync({
@@ -75,14 +71,25 @@ export default function AppRoute(){
 
     const getInitialUrl = async() => {
         const initialUrl = await Linking.getInitialURL();
-        if(initialUrl){
-            console.log(Linking.parse(initialUrl));
+        if(initialUrl.includes("pendingFriendRequest")){
+            parseData(initialUrl);
         }
     }
 
+    const parseData = (url) => {
+        const pendingFriendRequest = Linking.parse(url);
+        const data = {
+            pendingFriendToken: pendingFriendRequest.queryParams.friendToken,
+            pendingFriendUsername: pendingFriendRequest.queryParams.username
+        }
+
+        dispatch(setPendingFriend(data));
+        
+    }
+
     useEffect(() => {
-        Linking.addEventListener('url', (e) => {
-            console.log(Linking.parse(e.url))
+        const linking = Linking.addEventListener('url', (e) => {
+            parseData(e.url);
             dispatch(setIsDeepLinkForeground({isDeepLinkForeground: true}))
         })
         if(!isDeepLinkForeground){
@@ -92,14 +99,10 @@ export default function AppRoute(){
         loadFonts();
 
         return () => {
-            Linking.removeEventListener("url");
+            linking.remove();
         }
 
     }, [])
-
-    if(!fontIsLoaded){
-        return null;
-    }
 
     auth.onAuthStateChanged((user) => {
         if(user && (newUser == null)){
@@ -115,6 +118,10 @@ export default function AppRoute(){
             dispatch(setSignIn(data));
         }
     })
+
+    if(!fontIsLoaded){
+        return null;
+    }
 
     return(
         <NavigationContainer>
@@ -151,12 +158,10 @@ export default function AppRoute(){
                                             friendsLocation = {friendsLocation}
                                             friendToken = {friendToken}
                                             loadFriendsLocation = {loadFriendsLocation}
-                                            loadAddFriends = {loadAddFriends}
                                             username = {username}
-                                            pendingFriendStatus = {pendingFriendStatus}
-                                            pendingFriendName = {pendingFriendName}
-                                            pendingFriendToken = {pendingFriendToken}
                                             friendsList = {friendsList}
+                                            pendingFriendToken = {pendingFriendToken}
+                                            pendingFriendUsername = {pendingFriendUsername}
                                             currentLoc = {currentLoc} ></NearYouPage>}>
                                     </Stack.Screen>
 

@@ -8,10 +8,10 @@ import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons'; 
 
 //redux imports
-import { addFriend, getFriendsLocation, getPendingFriendRequestData, resetMyPendingFriendRequest, resetPendingFriend, setPendingFriend, updateStatusToFulfilled, validateFriendToken } from '../redux/RTDatabseSlice';
+import { acceptFriendRequest, addFriend, getFriendsLocation, getPendingFriendRequestData, resetMyPendingFriendRequest, resetPendingFriend } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
 import { getDatabase, onValue, ref } from 'firebase/database';
-import { addFriendToList, addToFriendsList, getFriendsList } from '../redux/firestoreSlice';
+import { addFriendToList, getFriendsList } from '../redux/firestoreSlice';
 
 //Sharing imports
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -20,8 +20,8 @@ import * as Linking from 'expo-linking';
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
 
-export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken, loadFriendsLocation, loadAddFriends,
-  username, pendingFriendStatus, pendingFriendName, pendingFriendToken, friendsList, currentLoc}) => {
+export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken, loadFriendsLocation,
+  username, friendsList, pendingFriendToken, pendingFriendUsername, currentLoc}) => {
 
   const db = getDatabase();
 
@@ -34,12 +34,26 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
 
   const dispatch = useDispatch();
 
-  const acceptFriendRequest = () => {
-    updateStatusToFulfilled(friendToken, pendingFriendToken);
-  } 
+  const isValidRequest = () => {
+    if(!friendsList.includes(pendingFriendUsername)){
+      acceptFriendRequest(friendToken, pendingFriendToken, friendsList, username, pendingFriendUsername)
+  }else{
+      alert('already friends with user');
+      denyFriendRequest();
+  }
+  }
+
+  const denyFriendRequest = () => {
+    dispatch(resetPendingFriend());
+  }
 
   const shareFriendToken = (friendToken, username) => {
-    const link = Linking.createURL();
+    const link = Linking.createURL('pendingFriendRequest', {
+      queryParams: {
+        friendToken: friendToken,
+        username: username
+      }
+    });
     Share.share(
       {
         message: 'Add Friend Invite',
@@ -56,48 +70,35 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
 
   
   useEffect(() => {
-    if(loadFriendsLocation){
-      dispatch(getFriendsList(userToken));
-      dispatch(getFriendsLocation(friendToken));
-    }
-  }, [loadFriendsLocation])
+    const friendsLocationData = ref(db, friendToken + '/friends/');
+    return onValue(friendsLocationData, (snapshot) => {
+      if(loadFriendsLocation){
+        dispatch(getFriendsLocation(friendToken));
+        dispatch(getFriendsList(userToken));
+      }
+    })
+  }, [])
 
-  const pendingFriendRequest = ref(db, friendToken + '/pendingFriendRequest/status');
-  onValue(pendingFriendRequest, (snapshot) => {
-    switch(snapshot.val()){
-      case 'pending':
-          getPendingFriendRequestData(friendToken).then((data) => {
-            dispatch(setPendingFriend({
-              pendingFriendStatus: data.status,
-              pendingFriendToken: data.friendToken,
-              pendingFriendName: data.friendToken,
-            }))
+  useEffect(() => {
+    const pendingFriendRequest = ref(db, friendToken + '/pendingFriendRequest/status');
+    return onValue(pendingFriendRequest, (snapshot) => {
+      if(snapshot.val() == 'fulfilled'){
+        addFriend(pendingFriendToken, currentLoc, username, friendToken).then(() => {
+          addFriendToList(userToken, pendingFriendUsername);
+          resetMyPendingFriendRequest(friendToken);
+          dispatch(resetPendingFriend());
+        })
+      }else if(snapshot.val() == 'needsAction'){
+        getPendingFriendRequestData(friendToken).then((data) => {
+          addFriend(data.friendToken, currentLoc, username, friendToken).then(() => {
+            addFriendToList(userToken, data.username);
+            resetMyPendingFriendRequest(friendToken);
+            dispatch(resetPendingFriend());
           })
-        break;
-      case 'needsAction':
-          getPendingFriendRequestData(friendToken).then((data) => {
-            dispatch(setPendingFriend({
-              pendingFriendStatus: data.status,
-              pendingFriendToken: data.friendToken,
-              pendingFriendName: data.username,
-            }))
-          })
-        break;
-      case 'fulfilled':
-        if(pendingFriendToken && loadAddFriends){
-          addFriend(pendingFriendToken, currentLoc, username, friendToken).then(() => {
-            addFriendToList(userToken, pendingFriendToken);
-            resetMyPendingFriendRequest(friendToken).then(() => {
-              dispatch(resetPendingFriend());
-            });   
-          })
-        }
-        break;
-      default: 
-        break;
-    }
-  })
-
+        })
+      }
+    })
+  }, [username])
 
   /**
    * USE EFFECTS
@@ -120,7 +121,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
         <StatusBar></StatusBar>
         <MapView style={styles.map} showsUserLocation={true} ref={map} showsBuildings={true}>
           {friendsLocation.map(marker => {
-            return (<Marker title={marker.name} key={marker.name} coordinate={marker.latLng}></Marker>)
+            return (<Marker title={marker.name} key={marker.friendToken} coordinate={marker.latLng}></Marker>)
           })}
         </MapView>
         <BottomSheet ref={sheetRef} snapPoints={snapPoints} enablePanDownToClose index={-1} >
@@ -129,26 +130,15 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, friendToken
             {friendsList.map(friend => {
               return (<Text key={friend}>{friend}</Text>)
             })}
-            <TouchableOpacity onPress={shareFriendToken(friendToken, username)}>
+            <TouchableOpacity onPress={() => shareFriendToken(friendToken, username)}>
               <MaterialCommunityIcons name="share" size={40} color="black"></MaterialCommunityIcons>
             </TouchableOpacity>
-            <Formik initialValues={{oFriendToken: ''}} onSubmit={values => validateFriendToken(username, friendToken, values.oFriendToken, friendsList)}>
-            {({handleChange, handleSubmit, values}) => (
-              <View>
-                <Text>Add another users friendToken</Text>
-                <TextInput placeholder="Friend Token" onChangeText={handleChange('oFriendToken')} value = {values.oFriendToken}></TextInput>
-                <Button title = "Add User As Friend" onPress={handleSubmit}></Button>
-              </View>
-            )}
-            </Formik>
-            {pendingFriendStatus == 'needsAction' ? (
+            {pendingFriendToken != null ? (
                 <View>
-                  <Text>Accept Friend Request from {pendingFriendName}</Text>
-                  <Button title= "accept" onPress={acceptFriendRequest}></Button>
+                  <Text>Accept Friend Request from {pendingFriendUsername}</Text>
+                  <Button title= "accept" onPress={isValidRequest}></Button>
+                  <Button title = "deny" onPress={denyFriendRequest}></Button>
                 </View>
-            ):null}
-            {pendingFriendStatus == 'pending' ? (
-                <Text>Waiting for {pendingFriendToken} to accept</Text>
             ):null}
           </BottomSheetView>
         </BottomSheet>

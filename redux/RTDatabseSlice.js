@@ -8,60 +8,29 @@ import { child, get, getDatabase, push, ref, set, update } from 'firebase/databa
 
 */
 
-export const validateFriendToken = (myName, myFriendToken, otherFriendToken, friendsList) => {
-    if(otherFriendToken != ''){
-        const db = getDatabase();
-        const dbRef = ref(db);
-        get(child(dbRef, otherFriendToken)).then((snapshot) => {
-        if(snapshot.exists() && !friendsList.includes(otherFriendToken)){
-            activeFriendRequest(myName, myFriendToken, otherFriendToken);
-        }else{
-            alert('invalid Token or already friends with user');
-        }
+export const acceptFriendRequest = (myFriendToken, otherFriendToken, friendsList, username, otherFriendName) => {
+    const db = getDatabase();
+
+    if(!friendsList.includes(otherFriendName)){
+        update(ref(db, otherFriendToken + '/pendingFriendRequest/'), {
+            status: 'needsAction',
+            friendToken: myFriendToken,
+            username: username
+        }).then(() => {
+        })
+    
+        update(ref(db, myFriendToken + '/pendingFriendRequest/'), {
+            status: 'fulfilled'
+        }).then(() => {
         })
     }else{
-        alert('empty friend Token');
+        alert('already friends with user');
     }
-}
-
-const activeFriendRequest = (myName, myFriendToken, otherFriendToken) => {
-    const db = getDatabase();
-    console.log('activate friend request');
-
-    update(ref(db, otherFriendToken + '/pendingFriendRequest'), {
-        status: 'needsAction',
-        username: myName,
-        friendToken: myFriendToken
-    }).then(() => {
-    })
-
-    update(ref(db, myFriendToken + '/pendingFriendRequest'), {
-        status: 'pending',
-        friendToken: otherFriendToken
-    }).then(() => {
-    })
-
-}
-
-export const updateStatusToFulfilled = (myFriendToken, otherFriendToken) => {
-    const db = getDatabase();
-    console.log('updated to fulfilled');
-
-    update(ref(db, otherFriendToken + '/pendingFriendRequest'), {
-        status: 'fulfilled'
-    }).then(() => {
-    })
-
-    update(ref(db, myFriendToken + '/pendingFriendRequest/'), {
-        status: 'fulfilled'
-    }).then(() => {
-    })
 }
 
 
 export const addFriend = async (otherFriendToken, loc, username, myFriendToken) => {
     const db = getDatabase();
-    console.log('addingFriend')
 
     const newRef = ref(db, otherFriendToken + '/friends/');
 
@@ -85,7 +54,7 @@ export const getPendingFriendRequestData = async (friendToken) => {
     const db = getDatabase();
     const dbRef = ref(db);
 
-    const snapshot = await get(child(dbRef, friendToken + '/pendingFriendRequest'));
+    const snapshot = await get(child(dbRef, friendToken + '/pendingFriendRequest/'));
 
     return snapshot.val();
 }
@@ -142,6 +111,9 @@ export const getFriendsLocation = createAsyncThunk('realtimeDatabase/getFriendsL
                     case "name":
                         user["name"] = grandChild.val();
                         break;
+                    case 'friendToken':
+                        user['friendToken'] = grandChild.val();
+                        break;
                     default: 
                         //going through users latLng Object
                         const retreivedLoc = {};
@@ -193,14 +165,12 @@ export const checkIfNewUser = async(userId) => {
 const initialState = {
     friendsLocation: [],
     loadFriendsLocation: true,
-    loadAddFriends:true,
     loc: {},
     currentLocIsLoaded: false,
     friendToken: null,
-    pendingFriendStatus: null,
     pendingFriendToken: null,
-    pendingFriendName: null,
-    
+    pendingFriendUsername: null
+
 }
 
 const RTDatabaseSlice = createSlice({
@@ -210,22 +180,17 @@ const RTDatabaseSlice = createSlice({
         setFriendToken: (state, action) => {
             state.friendToken = action.payload.friendToken
         },
-        setPendingFriend: (state, action) => {
-            state.pendingFriendStatus = action.payload.pendingFriendStatus;
-            state.pendingFriendToken = action.payload.pendingFriendToken;
-            state.pendingFriendName = action.payload.pendingFriendName;
-            state.loadFriendsLocation = false;
-            state.loadAddFriends = true;
-        },
-        resetPendingFriend: (state) => {
-            state.pendingFriendStatus = null;
-            state.pendingFriendToken = null;
-            state.pendingFriendName = null;
-            state.loadFriendsLocation = true;
-            state.loadAddFriends = false;
-        },
         setLoadFriendsLocation: (state, action) => {
             state.loadFriendsLocation = action.payload.loadFriendsLocation;
+        },
+        setPendingFriend: (state,action) => {
+            state.pendingFriendToken = action.payload.pendingFriendToken;
+            state.pendingFriendUsername = action.payload.pendingFriendUsername;
+        },
+        resetPendingFriend: (state) => {
+            state.pendingFriendToken = null;
+            state.pendingFriendUsername = null;
+            state.loadFriendsLocation = true;
         }
     },
     extraReducers: (builder) =>  {
@@ -241,16 +206,14 @@ const RTDatabaseSlice = createSlice({
     
 });
 
-export const { setFriendToken, setCurrentLocation, setPendingFriend, resetPendingFriend, setLoadFriendsLocation} = RTDatabaseSlice.actions;
+export const { setFriendToken, setCurrentLocation, setLoadFriendsLocation, setPendingFriend, resetPendingFriend} = RTDatabaseSlice.actions;
 
 export const selectCurrentLocation = (state) => state.realtimeDatabase.loc;
 export const selectCurrentLocationIsLoaded = (state) => state.realtimeDatabase.currentLocIsLoaded;
 export const selectFriendsLocation = (state) => state.realtimeDatabase.friendsLocation;
 export const selectFriendToken = (state) => state.realtimeDatabase.friendToken;
 export const selectLoadFriendsLocation = (state) => state.realtimeDatabase.loadFriendsLocation;
-export const selectLoadAddFriends = (state) => state.realtimeDatabase.loadAddFriends;
-export const selectPendingFriendStatus = (state) => state.realtimeDatabase.pendingFriendStatus;
 export const selectPendingFriendToken = (state) => state.realtimeDatabase.pendingFriendToken;
-export const selectPendingFriendName = (state) => state.realtimeDatabase.pendingFriendName;
+export const selectPendingFriendUsername = (state) => state.realtimeDatabase.pendingFriendUsername;
 
 export default RTDatabaseSlice.reducer;
