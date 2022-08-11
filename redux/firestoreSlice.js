@@ -12,13 +12,14 @@ export const getFriendsList = createAsyncThunk('firestore/getFriendsList', async
     const firestore = getFirestore();
     const docSnap = await getDoc(doc(firestore, 'users', userId));
 
+
     let list = [];
     docSnap.data().friendsList.forEach((friend) => {
         list.push(friend);
     })
 
     const data = {
-        friendsList: list
+        friendsList: list,
     }
     return data;
 })
@@ -54,7 +55,7 @@ export const newUserDoc = async(userId, name) => {
 
 */
 
-export const addFriendToList = async(userId, name) => {
+export const addFriendToList = async(userId, name, friendToken) => {
     const firestore = getFirestore();
     const docSnap = await getDoc(doc(firestore, 'users', userId));
 
@@ -62,13 +63,19 @@ export const addFriendToList = async(userId, name) => {
 
     if(!list){
         await updateDoc(doc(firestore, 'users', userId), {
-            friendsList: [name]
+            friendsList: [{
+                token: friendToken,
+                name: name
+            }],
         }).then(() => {            
         })
     }else{
-        list.push(name);
+        list.push({
+            token: friendToken,
+            name: name
+        });
         await updateDoc(doc(firestore, 'users', userId), {
-            friendsList: list
+            friendsList: list,
         }).then(() => {
         })
     }
@@ -87,7 +94,7 @@ export const saveUsername = async(userId, newName) => {
 const initialState = {
     isLoaded: false,
     username: null,
-    friendsList: [],
+    friendsList: []
 }
 
 const firestoreSlice = createSlice({

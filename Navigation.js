@@ -11,13 +11,13 @@ import { LandingPage } from './views/Landing';
 import { ProfilePage } from './views/Profile';
 import { NewUserSetupPage } from './views/NewUserSetup';
 import { LoadingPage } from './views/Loading';
-import { AntDesign } from '@expo/vector-icons';
 //redux imports
 import { selectFontIsLoaded, selectIsDeepLinkForeground, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded, setIsDeepLinkForeground } from './redux/authSlice';
 import { useSelector, useDispatch } from 'react-redux/';
 import { selectFriendsList, selectUsername } from './redux/firestoreSlice';
-import { selectCurrentLocation, selectCurrentLocationIsLoaded, selectFriendsLocation, selectFriendToken, 
-    selectLoadFriendsLocation, selectPendingFriendToken, selectPendingFriendUsername, setPendingFriend} from './redux/RTDatabseSlice';
+import { selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsLocation, selectFriendToken, 
+    selectLoadEvents, 
+    selectPendingFriendToken, selectPendingFriendUsername, selectTempEvent, setPendingFriend} from './redux/RTDatabseSlice';
 import { setSignIn } from "./redux/authSlice";
 import { getUsername } from "./redux/firestoreSlice";
 import { getCurrentLocation, setFriendToken } from "./redux/RTDatabseSlice";
@@ -52,12 +52,17 @@ export default function AppRoute(){
 
     //RTDB slice variables
     const friendsLocation = useSelector(selectFriendsLocation);
+    const tempEvent = useSelector(selectTempEvent);
+    const loadEvents = useSelector(selectLoadEvents);
+    const eventLocations = useSelector(selectEventLocations);
+
     const friendToken = useSelector(selectFriendToken);
-    const loadFriendsLocation = useSelector(selectLoadFriendsLocation);
     const currentLoc = useSelector(selectCurrentLocation);
     const currentLocIsLoaded = useSelector(selectCurrentLocationIsLoaded);
+    
     const pendingFriendToken = useSelector(selectPendingFriendToken);
     const pendingFriendUsername = useSelector(selectPendingFriendUsername);
+
 
     const loadFonts = async() => {
         await Font.loadAsync({
@@ -156,8 +161,10 @@ export default function AppRoute(){
                                         children={(props) => <NearYouPage {...props} 
                                             userToken = {userToken}
                                             friendsLocation = {friendsLocation}
+                                            tempEvent = {tempEvent}
+                                            loadEvents = {loadEvents}
+                                            eventLocations = {eventLocations}
                                             friendToken = {friendToken}
-                                            loadFriendsLocation = {loadFriendsLocation}
                                             username = {username}
                                             friendsList = {friendsList}
                                             pendingFriendToken = {pendingFriendToken}

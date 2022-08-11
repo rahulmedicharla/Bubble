@@ -38,7 +38,10 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
             <Button title = "Store username" onPress={handleSubmit}></Button>
           </View>
           )}
-        </Formik>        
+        </Formik>
+        <Text>Tis simple to use</Text>
+        <Text>click share button in modal to send invite link to friend - Friend will accept ord deny</Text>
+        <Text>To plan event, hold down location on map to initiate event process</Text>
       </View>
     );
 }

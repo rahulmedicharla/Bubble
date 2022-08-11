@@ -1,6 +1,129 @@
+import { async } from "@firebase/util";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { getCurrentPositionAsync, requestForegroundPermissionsAsync } from "expo-location";
-import { child, get, getDatabase, push, ref, set, update } from 'firebase/database';
+import { child, get, getDatabase, push, ref, remove, set, update } from 'firebase/database';
+
+/*
+
+    CREATE EVENT
+
+*/
+
+
+const createGlobalEventRef = async (title, location, time, latLng, friendToken, friendsList, username) =>{
+    const db = getDatabase();
+
+    let list = [];
+    list.push({
+        name: username,
+        token: friendToken,
+        status: 'Unanswered'
+    })
+    friendsList.map((friend) => {
+        list.push({
+            name: friend.name,
+            token: friend.token,
+            status: 'Unanswered'
+        })
+    })
+
+    const newRef = ref(db, 'events/' + friendToken);
+    const newPostRef = push(newRef);
+    
+    
+    const upload = {
+        title: title,
+        location: location,
+        creator: {
+            name: username,
+            token: friendToken
+        },
+        time: time, 
+        latLng: latLng,
+        key: newPostRef.key,
+        pendingResponses: list
+    }    
+
+    await set(newPostRef, upload);
+
+    return newPostRef.key;
+}
+
+const updateFriendOfEvent = (otherFriendToken, friendToken, key) => {
+    const db = getDatabase();
+
+    get(child(ref(db), otherFriendToken + '/pendingEvent/')).then((snapshot) => {
+        if(snapshot.exists()){
+            update(ref(db, otherFriendToken + '/pendingEvent/'), {
+                [key]: {
+                    friendToken: friendToken,
+                    status: 0
+                }
+            })
+        }else{
+            set(ref(db, otherFriendToken + '/pendingEvent/'), {
+                [key]: {
+                    friendToken: friendToken,
+                    status: 0
+                }
+            })
+        }
+    });
+}
+
+export const createEvent = (title, location, time, latLng, friendToken, friendsList, username) => {
+    createGlobalEventRef(title, location, time, latLng, friendToken, friendsList, username).then((key) => {
+        updateFriendOfEvent(friendToken, friendToken, key);
+        friendsList.map((friend) => {
+            updateFriendOfEvent(friend.token, friendToken, key);
+        })
+    })
+}
+
+export const deleteEvent = (friendsList, friendToken, key) => {
+    const db = getDatabase();
+
+    remove(ref(db, 'events/' + friendToken + '/' + key));
+
+    remove(ref(db, friendToken + '/pendingEvent/' + key));
+    friendsList.map((friend) => {
+        remove(ref(db, friend.token + '/pendingEvent/' + key));
+    })
+
+}
+
+export const updateYourStatusInEvent = async (pendingResponses, creator, key, friendToken, newStatus) => {
+    const db = getDatabase();
+
+    get(child(ref(db), 'events/' + creator + '/' + key + '/pendingResponses/')).then((snapshot) => {
+        let counter = 0;
+        snapshot.forEach((response) => {
+            if(response.val().token == friendToken){
+                update(ref(db, 'events/' + creator + '/' + key + '/pendingResponses/' + counter + '/'), {
+                    status: newStatus
+                }).then(() => {
+                    updateStausToRerender(pendingResponses, key, friendToken);
+                })
+            }
+            counter++;
+        })
+    });
+}
+
+const updateStausToRerender = (pendingResponses , key, friendToken) => {
+    const db = getDatabase();
+    get(child(ref(db), friendToken + '/pendingEvent/' + key + '/status')).then((val) => {
+        pendingResponses.map((response) => {    
+            update(ref(db, response.token + '/pendingEvent/' + key), {
+                status: parseInt(val.val()) + 1
+            })
+        })
+    })
+}
+
+
+
+
 
 /*
 
@@ -8,24 +131,20 @@ import { child, get, getDatabase, push, ref, set, update } from 'firebase/databa
 
 */
 
-export const acceptFriendRequest = (myFriendToken, otherFriendToken, friendsList, username, otherFriendName) => {
+export const acceptFriendRequest = (myFriendToken, otherFriendToken, username) => {
     const db = getDatabase();
 
-    if(!friendsList.includes(otherFriendName)){
-        update(ref(db, otherFriendToken + '/pendingFriendRequest/'), {
-            status: 'needsAction',
-            friendToken: myFriendToken,
-            username: username
-        }).then(() => {
-        })
-    
-        update(ref(db, myFriendToken + '/pendingFriendRequest/'), {
-            status: 'fulfilled'
-        }).then(() => {
-        })
-    }else{
-        alert('already friends with user');
-    }
+    update(ref(db, otherFriendToken + '/pendingFriendRequest/'), {
+        status: 'needsAction',
+        friendToken: myFriendToken,
+        username: username
+    }).then(() => {
+    })
+
+    update(ref(db, myFriendToken + '/pendingFriendRequest/'), {
+        status: 'fulfilled'
+    }).then(() => {
+    })
 }
 
 
@@ -38,7 +157,7 @@ export const addFriend = async (otherFriendToken, loc, username, myFriendToken) 
         latLng: loc,
         name: username,
         friendToken: myFriendToken
-    }
+    }    
 
     const newPostRef = push(newRef);
     await set(newPostRef, upload);
@@ -74,6 +193,18 @@ export const resetMyPendingFriendRequest = async (friendToken) => {
 
 */
 
+export const getEvents = createAsyncThunk('realtimeDatabase/getEvents', async(data) => {
+    const db = getDatabase();
+
+    const snapshot = await get(child(ref(db), '/events/' + data.val + '/' + data.key));
+
+    const event = {
+        eventData: snapshot.val()
+    }
+
+    return event;
+})
+
 export const getCurrentLocation = createAsyncThunk('realtimeDatabase/getCurrentLocation', async() => {
     const { status } = await requestForegroundPermissionsAsync();
     if (status !== 'granted') {
@@ -85,8 +216,8 @@ export const getCurrentLocation = createAsyncThunk('realtimeDatabase/getCurrentL
     
     const data = {
         loc:{
-            latitude: location.coords.latitude.toFixed(3),
-            longitude: location.coords.longitude.toFixed(3),
+            latitude: location.coords.latitude.toFixed(7),
+            longitude: location.coords.longitude.toFixed(7),
         }
     }
 
@@ -164,12 +295,14 @@ export const checkIfNewUser = async(userId) => {
 
 const initialState = {
     friendsLocation: [],
-    loadFriendsLocation: true,
+    eventLocations: [],
+    tempEvent: null,
     loc: {},
     currentLocIsLoaded: false,
     friendToken: null,
     pendingFriendToken: null,
-    pendingFriendUsername: null
+    pendingFriendUsername: null,
+    loadEvents: true
 
 }
 
@@ -180,9 +313,6 @@ const RTDatabaseSlice = createSlice({
         setFriendToken: (state, action) => {
             state.friendToken = action.payload.friendToken
         },
-        setLoadFriendsLocation: (state, action) => {
-            state.loadFriendsLocation = action.payload.loadFriendsLocation;
-        },
         setPendingFriend: (state,action) => {
             state.pendingFriendToken = action.payload.pendingFriendToken;
             state.pendingFriendUsername = action.payload.pendingFriendUsername;
@@ -190,30 +320,45 @@ const RTDatabaseSlice = createSlice({
         resetPendingFriend: (state) => {
             state.pendingFriendToken = null;
             state.pendingFriendUsername = null;
-            state.loadFriendsLocation = true;
+        },
+        setTempEvent: (state, action) => {
+            state.tempEvent = action.payload.tempEvent
+        },
+        resetTempEvent: (state) => {
+            state.tempEvent = null;
+        },
+        setLoadEvents: (state, action) => {
+            state.loadEvents = action.payload.loadEvents;
+        },
+        resetEventLocations: (state) => {
+            state.eventLocations = []
         }
     },
     extraReducers: (builder) =>  {
         builder.addCase(getFriendsLocation.fulfilled, (state,action) => {
             state.friendsLocation = action.payload.friends;
-            state.loadFriendsLocation = action.payload.loadFriendsLocation;
         })
         builder.addCase(getCurrentLocation.fulfilled, (state,action) => {
             state.loc = action.payload.loc;
             state.currentLocIsLoaded = true;
         })
+        builder.addCase(getEvents.fulfilled, (state, action) => {
+            state.eventLocations.push(action.payload.eventData)
+        })
     }
     
 });
 
-export const { setFriendToken, setCurrentLocation, setLoadFriendsLocation, setPendingFriend, resetPendingFriend} = RTDatabaseSlice.actions;
+export const { setFriendToken, setCurrentLocation, setLoadFriendsLocation, setTempEvent, setPendingFriend, setLoadEvents, resetPendingFriend, resetTempEvent, resetEventLocations} = RTDatabaseSlice.actions;
 
 export const selectCurrentLocation = (state) => state.realtimeDatabase.loc;
 export const selectCurrentLocationIsLoaded = (state) => state.realtimeDatabase.currentLocIsLoaded;
 export const selectFriendsLocation = (state) => state.realtimeDatabase.friendsLocation;
+export const selectEventLocations = (state) => state.realtimeDatabase.eventLocations;
+export const selectTempEvent = (state) => state.realtimeDatabase.tempEvent;
 export const selectFriendToken = (state) => state.realtimeDatabase.friendToken;
-export const selectLoadFriendsLocation = (state) => state.realtimeDatabase.loadFriendsLocation;
 export const selectPendingFriendToken = (state) => state.realtimeDatabase.pendingFriendToken;
 export const selectPendingFriendUsername = (state) => state.realtimeDatabase.pendingFriendUsername;
+export const selectLoadEvents = (state) => state.realtimeDatabase.loadEvents;
 
 export default RTDatabaseSlice.reducer;
