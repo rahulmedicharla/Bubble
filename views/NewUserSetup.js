@@ -5,6 +5,7 @@ import { useDispatch } from "react-redux";
 import { setNewUserFalse } from "../redux/authSlice";
 import { newUserDoc, saveUsername, setUsername } from "../redux/firestoreSlice";
 import { getCurrentLocation } from "../redux/RTDatabseSlice";
+import Checkbox from 'expo-checkbox';
 
 export const NewUserSetupPage = ({navigation, userToken}) => {
 
@@ -39,6 +40,16 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
           </View>
           )}
         </Formik>
+        <View style = {styles.allCheckBoxes}>
+            <View style = {styles.checkBox}>
+                <Checkbox style={styles.checkBoxStyle} color={'#75D0E3'} value={checkBoxOne} onValueChange={() => {setCheckBoxOne(!checkBoxOne)}}></Checkbox>
+                <Text style={styles.checkText}>I agree to the terms and conditions</Text>
+            </View>
+            <View style={styles.checkBox}>
+                <Checkbox style={styles.checkBoxStyle} color={'#75D0E3'} value={checkBoxTwo} onValueChange= {() => {setCheckBoxTwo(!checkBoxTwo)}}></Checkbox>
+                <Text style={styles.checkText}>I promise to be a nice friend</Text>
+            </View>
+        </View>
         <Text>Tis simple to use</Text>
         <Text>click share button in modal to send invite link to friend - Friend will accept ord deny</Text>
         <Text>To plan event, hold down location on map to initiate event process</Text>
@@ -52,5 +63,22 @@ const styles = StyleSheet.create({
       backgroundColor: '#fff',
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    allCheckBoxes: {
+      marginTop: 75
+    },
+    checkBox: {
+        marginTop: 10,
+        flexDirection: 'row',
+    },
+    checkText: {
+        alignSelf: 'center',
+        marginLeft: 30,
+        fontFamily: 'TextLight'
+    },
+    checkBoxStyle: {
+        width: 27,
+        height: 27,
+        borderRadius: 5
     },
   });

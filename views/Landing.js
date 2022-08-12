@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, Text, Image, TouchableOpacity} from "react-native";
+import { StyleSheet, View, Text, Image, TouchableOpacity, ImageBackground} from "react-native";
 
 export const LandingPage = ({navigation}) => {
 
@@ -9,13 +9,12 @@ export const LandingPage = ({navigation}) => {
 
   return(
     <View style={styles.container}>
-      <StatusBar></StatusBar>
-      <Image style={styles.margin} source={require('../assets/bubbleLogo.png')}></Image>
-      <Image style={styles.margin} source={require('../assets/bubbleText.png')}></Image>
-      <Text style = {styles.text}>{'an IRL social :)'}</Text>
-      <TouchableOpacity style={styles.buttonBackground} onPress={goToSignUp}>
-        <Text style = {styles.buttonText}>Sign Up!</Text>
-      </TouchableOpacity>
+      <ImageBackground style={styles.backgroundImg} source={require('../assets/background.png')}>
+        <StatusBar></StatusBar>
+        <TouchableOpacity onPress={goToSignUp}>
+          <Image style={styles.logo} source={require('../assets/logo.png')}></Image>
+        </TouchableOpacity>
+      </ImageBackground>
     </View>
   );
 }
@@ -27,27 +26,13 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
     },
-    margin: {
-      marginBottom: 30
+    backgroundImg: {
+      width: '100%',
+      height: '100%',
+      alignItems: 'center',
+      justifyContent: 'center'
     },
-    text: {
-      color: '#696363',
-      fontSize: 20,
-      fontFamily: 'TextFont',
+    logo: {
+      marginRight: 40
     },
-    buttonBackground: {
-      backgroundColor : '#58C4CB',
-      marginTop: 150,
-      borderRadius:10,
-      borderColor: '#58C4CB'
-    },
-    buttonText: {
-      textAlign: 'center',
-      paddingLeft : 130,
-      paddingRight : 130,
-      marginTop: 9,
-      marginBottom: 9,
-      fontSize: 20,
-      fontFamily: 'TextFont',
-    }
   });

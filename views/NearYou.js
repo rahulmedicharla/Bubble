@@ -165,6 +165,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
     if(updateList != null && updateList.length > 0){
       const timer = setTimeout(() => {
         dispatch(getCurrentLocation()).then(() => {
+          console.log('updating');
           updateLoc(currentLoc, updateList);
         });
       }, 60000)
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     borderRadius: 10
   },
   selectionText: {
-    fontFamily: 'TextFont',
+    fontFamily: 'TextNormal',
     paddingLeft: 10,
     paddingRight: 10,
     paddingTop: 5,
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
 
   },
   createEventText: {
-    fontFamily: 'TextFont',
+    fontFamily: 'TextNormal',
     fontSize: 17,
   },
   createEventInputs: {

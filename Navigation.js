@@ -1,5 +1,4 @@
 import 'react-native-gesture-handler';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer} from '@react-navigation/native';
 import * as Linking from 'expo-linking';
@@ -28,6 +27,7 @@ import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import { HeaderRightButton } from './views/headerButtons/HeaderRight';
+import { Asset } from 'expo-asset';
 
 const Stack = createStackNavigator();
 
@@ -67,7 +67,9 @@ export default function AppRoute(){
 
     const loadFonts = async() => {
         await Font.loadAsync({
-            'TextFont': require('./assets/GloriaHallelujah-Regular.ttf')
+            'TextBold': require('./assets/fonts/AlbertSans-SemiBold.ttf'),
+            'TextLight': require('./assets/fonts/AlbertSans-Light.ttf'),
+            'TextNormal': require('./assets/fonts/AlbertSans-Regular.ttf')
         })
 
     }
@@ -95,11 +97,13 @@ export default function AppRoute(){
             parseData(e.url);
             dispatch(setIsDeepLinkForeground({isDeepLinkForeground: true}))
         })
+        
         if(!isDeepLinkForeground){
             getInitialUrl();
         }
 
         loadFonts().then(() => {
+            Asset.fromModule(require('./assets/background.png')).downloadAsync();
             dispatch(setFontIsLoaded({fontIsLoaded: true}));
         })
 
@@ -148,7 +152,7 @@ export default function AppRoute(){
                     <Stack.Screen name = "Landing" options={{headerShown: false}} children={(props) => <LandingPage {...props}
                         ></LandingPage> }>
                     </Stack.Screen>
-                    <Stack.Screen name = "SignUp" options={{headerBackTitleVisible :false}} children={(props) => <SignUpPage {...props}
+                    <Stack.Screen name = "SignUp" options={{headerShown: false}} children={(props) => <SignUpPage {...props}
                         verificationCode = {verificationCode}
                         ></SignUpPage>}>
                     </Stack.Screen>
