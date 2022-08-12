@@ -12,14 +12,14 @@ import { ProfilePage } from './views/Profile';
 import { NewUserSetupPage } from './views/NewUserSetup';
 import { LoadingPage } from './views/Loading';
 //redux imports
-import { selectFontIsLoaded, selectIsDeepLinkForeground, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded, setIsDeepLinkForeground } from './redux/authSlice';
+import { selectFontIsLoaded, selectIsDeepLinkForeground, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded, setIsDeepLinkForeground, setSignOut } from './redux/authSlice';
 import { useSelector, useDispatch } from 'react-redux/';
-import { selectFriendsList, selectUsername } from './redux/firestoreSlice';
-import { selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsLocation, selectFriendToken, 
-    selectLoadEvents, 
+import { selectFriendsList, selectUpdateList, selectUsername } from './redux/firestoreSlice';
+import { checkIfNewUser, newUserRLDB, selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsLocation, selectFriendToken,  
+    selectOnLoadZoomToLoc,  
     selectPendingFriendToken, selectPendingFriendUsername, selectTempEvent, setPendingFriend} from './redux/RTDatabseSlice';
 import { setSignIn } from "./redux/authSlice";
-import { getUsername } from "./redux/firestoreSlice";
+import { getUsername, getFriendsList } from "./redux/firestoreSlice";
 import { getCurrentLocation, setFriendToken } from "./redux/RTDatabseSlice";
 //firebase imports
 import { getAuth } from 'firebase/auth';
@@ -49,16 +49,17 @@ export default function AppRoute(){
     //firestore slice variables
     const username = useSelector(selectUsername);
     const friendsList = useSelector(selectFriendsList);
+    const updateList = useSelector(selectUpdateList);
 
     //RTDB slice variables
     const friendsLocation = useSelector(selectFriendsLocation);
     const tempEvent = useSelector(selectTempEvent);
-    const loadEvents = useSelector(selectLoadEvents);
     const eventLocations = useSelector(selectEventLocations);
 
     const friendToken = useSelector(selectFriendToken);
     const currentLoc = useSelector(selectCurrentLocation);
     const currentLocIsLoaded = useSelector(selectCurrentLocationIsLoaded);
+    const onLoadZoomToLoc = useSelector(selectOnLoadZoomToLoc);
     
     const pendingFriendToken = useSelector(selectPendingFriendToken);
     const pendingFriendUsername = useSelector(selectPendingFriendUsername);
@@ -67,9 +68,6 @@ export default function AppRoute(){
     const loadFonts = async() => {
         await Font.loadAsync({
             'TextFont': require('./assets/GloriaHallelujah-Regular.ttf')
-        }).then(() => {
-            SplashScreen.hideAsync();
-            dispatch(setFontIsLoaded({fontIsLoaded: true}));
         })
 
     }
@@ -101,28 +99,42 @@ export default function AppRoute(){
             getInitialUrl();
         }
 
-        loadFonts();
+        loadFonts().then(() => {
+            dispatch(setFontIsLoaded({fontIsLoaded: true}));
+        })
+
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if(user){
+                checkIfNewUser(user.uid).then((userExists) => {
+                    if(userExists){
+                        dispatch(getUsername(user.uid));
+                        dispatch(getFriendsList(user.uid));
+                        dispatch(getCurrentLocation());
+                    }else{
+                        newUserRLDB(user.uid);
+                    }
+                    dispatch(setFriendToken({friendToken: user.uid.substring(0,6)}))
+                    const data = {
+                        isLoggedIn: true,
+                        userToken: user.uid,
+                        newUser: !userExists
+                    };
+                    dispatch(setSignIn(data));
+                })
+            }else{
+                dispatch(setSignOut());
+            }
+            
+            SplashScreen.hideAsync();
+        })
 
         return () => {
             linking.remove();
-        }
+            unsubscribe();
+        };
 
     }, [])
 
-    auth.onAuthStateChanged((user) => {
-        if(user && (newUser == null)){
-            dispatch(setFriendToken({friendToken: user.uid.substring(0,6)}))
-            dispatch(getUsername(user.uid));
-            dispatch(getCurrentLocation());
-  
-            const data = {
-            isLoggedIn: true,
-            userToken: user.uid,
-            newUser: false
-            };
-            dispatch(setSignIn(data));
-        }
-    })
 
     if(!fontIsLoaded){
         return null;
@@ -162,13 +174,14 @@ export default function AppRoute(){
                                             userToken = {userToken}
                                             friendsLocation = {friendsLocation}
                                             tempEvent = {tempEvent}
-                                            loadEvents = {loadEvents}
                                             eventLocations = {eventLocations}
                                             friendToken = {friendToken}
                                             username = {username}
                                             friendsList = {friendsList}
+                                            updateList = {updateList}
                                             pendingFriendToken = {pendingFriendToken}
                                             pendingFriendUsername = {pendingFriendUsername}
+                                            onLoadZoomToLoc = {onLoadZoomToLoc}
                                             currentLoc = {currentLoc} ></NearYouPage>}>
                                     </Stack.Screen>
 

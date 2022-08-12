@@ -14,11 +14,7 @@ export const ProfilePage = ({navigation, username, userToken, friendToken}) => {
   const dispatch = useDispatch();
  
   const signUserOut = () => {
-    signOut(auth).then(() => {
-        dispatch(setSignOut());
-    }).catch((error) => {
-        console.log(error);
-    });
+    signOut(auth);
   }
 
     return(

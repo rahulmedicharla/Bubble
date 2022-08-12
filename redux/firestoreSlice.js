@@ -9,18 +9,30 @@ import { doc, getDoc, getFirestore, updateDoc, setDoc } from "firebase/firestore
 */
 
 export const getFriendsList = createAsyncThunk('firestore/getFriendsList', async (userId) => {
+
     const firestore = getFirestore();
     const docSnap = await getDoc(doc(firestore, 'users', userId));
 
-
     let list = [];
-    docSnap.data().friendsList.forEach((friend) => {
-        list.push(friend);
-    })
+    let updateList = [];
+
+
+    if(docSnap.data().friendsList != null){
+
+        docSnap.data().friendsList.forEach((friend) => {
+            list.push(friend);
+        })
+
+        docSnap.data().updateKeyList.forEach((keys) => {
+            updateList.push(keys);
+        })
+    }
 
     const data = {
         friendsList: list,
-    }
+        updateList: updateList
+    };
+
     return data;
 })
 
@@ -55,11 +67,12 @@ export const newUserDoc = async(userId, name) => {
 
 */
 
-export const addFriendToList = async(userId, name, friendToken) => {
+export const addFriendToList = async(userId, name, friendToken, key) => {
     const firestore = getFirestore();
     const docSnap = await getDoc(doc(firestore, 'users', userId));
 
     const list = docSnap.data().friendsList;
+    const updateList = docSnap.data().updateKeyList;
 
     if(!list){
         await updateDoc(doc(firestore, 'users', userId), {
@@ -67,6 +80,10 @@ export const addFriendToList = async(userId, name, friendToken) => {
                 token: friendToken,
                 name: name
             }],
+            updateKeyList: [{
+                token: friendToken,
+                key: key
+            }]
         }).then(() => {            
         })
     }else{
@@ -74,8 +91,13 @@ export const addFriendToList = async(userId, name, friendToken) => {
             token: friendToken,
             name: name
         });
+        updateList.push({
+            token: friendToken,
+            key: key
+        });
         await updateDoc(doc(firestore, 'users', userId), {
             friendsList: list,
+            updateKeyList: updateList
         }).then(() => {
         })
     }
@@ -94,7 +116,8 @@ export const saveUsername = async(userId, newName) => {
 const initialState = {
     isLoaded: false,
     username: null,
-    friendsList: []
+    friendsList: [],
+    updateList: []
 }
 
 const firestoreSlice = createSlice({
@@ -111,7 +134,7 @@ const firestoreSlice = createSlice({
             return Object.assign({}, state, {username: action.payload.username, isLoaded: action.payload.isLoaded})
         })
         builder.addCase(getFriendsList.fulfilled, (state, action) => {
-            return Object.assign({}, state, {friendsList: action.payload.friendsList})
+            return Object.assign({}, state, {friendsList: action.payload.friendsList, updateList: action.payload.updateList})
         })
     }
     
@@ -122,5 +145,6 @@ export const { setUsername } = firestoreSlice.actions;
 export const selectUsername = (state) => state.firestore.username;
 export const selectIsLoaded = (state) => state.firestore.isLoaded;
 export const selectFriendsList = (state) => state.firestore.friendsList;
+export const selectUpdateList = (state) => state.firestore.updateList;
 
 export default firestoreSlice.reducer;

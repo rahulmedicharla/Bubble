@@ -8,13 +8,11 @@ import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 //react and redux special imports
 import React, {useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux/';
-import { setSignIn, setVerificationCode } from '../redux/authSlice';
-import { getFriendsList, getUsername } from '../redux/firestoreSlice';
-import { checkIfNewUser, getCurrentLocation, getFriendsLocation, newUserRLDB, setFriendToken } from '../redux/RTDatabseSlice';
+import {setVerificationCode } from '../redux/authSlice';
 //special imports
 import { Formik } from 'formik';
 import PhoneInput from 'react-native-phone-number-input';
-import { CodeField, useBlurOnFulfill, useClearByFocusCell, Cursor } from 'react-native-confirmation-code-field';
+import { CodeField, useBlurOnFulfill, useClearByFocusCell } from 'react-native-confirmation-code-field';
 
 
 export const SignUpPage = ({navigation, verificationCode}) => {
@@ -59,29 +57,7 @@ export const SignUpPage = ({navigation, verificationCode}) => {
                 id,
                 code
               );
-            await signInWithCredential(auth, credential).then((credential) =>{
-
-                checkIfNewUser(credential.user.uid).then((userExists) => {
-                    if(userExists){
-                        dispatch(setFriendToken({friendToken: credential.user.uid.substring(0,6)}))
-                        dispatch(getUsername(credential.user.uid));
-                        dispatch(getCurrentLocation());
-    
-                    }else{
-                        newUserRLDB(credential.user.uid);
-                        dispatch(setFriendToken({
-                            friendToken: credential.user.uid.substring(0,6)
-                        }))
-                    }
-
-                    const user = {
-                        isLoggedIn: true,
-                        userToken: credential.user.uid,
-                        newUser: !userExists
-                    };
-                    dispatch(setSignIn(user));
-                })
-            });
+            await signInWithCredential(auth, credential)
         }catch(error){
             alert('Invalid Verification Code');
         };

@@ -5,6 +5,22 @@ import { child, get, getDatabase, push, ref, remove, set, update } from 'firebas
 
 /*
 
+    UPDATING MY LOC IN DATABASE
+
+*/
+
+export const updateLoc = (currentLoc, updateList) => {
+    const db = getDatabase();
+    updateList.map((friend) => {
+        update(ref(db, friend.token + '/friends/' + friend.key), {
+            latLng: currentLoc
+        })
+    })
+}
+
+
+/*
+
     CREATE EVENT
 
 */
@@ -131,7 +147,7 @@ const updateStausToRerender = (pendingResponses , key, friendToken) => {
 
 */
 
-export const acceptFriendRequest = (myFriendToken, otherFriendToken, username) => {
+export const acceptFriendRequest = (myFriendToken, otherFriendToken, username, otherFriendUsername) => {
     const db = getDatabase();
 
     update(ref(db, otherFriendToken + '/pendingFriendRequest/'), {
@@ -142,7 +158,9 @@ export const acceptFriendRequest = (myFriendToken, otherFriendToken, username) =
     })
 
     update(ref(db, myFriendToken + '/pendingFriendRequest/'), {
-        status: 'fulfilled'
+        status: 'fulfilled',
+        friendToken: otherFriendToken,
+        username: otherFriendUsername
     }).then(() => {
     })
 }
@@ -161,6 +179,8 @@ export const addFriend = async (otherFriendToken, loc, username, myFriendToken) 
 
     const newPostRef = push(newRef);
     await set(newPostRef, upload);
+
+    return newPostRef.key;
 
      //updating
     // update(newPostRef, upload).then(() => {
@@ -302,8 +322,8 @@ const initialState = {
     friendToken: null,
     pendingFriendToken: null,
     pendingFriendUsername: null,
-    loadEvents: true
-
+    loadEvents: true,
+    onLoadZoomToLoc: true
 }
 
 const RTDatabaseSlice = createSlice({
@@ -332,6 +352,9 @@ const RTDatabaseSlice = createSlice({
         },
         resetEventLocations: (state) => {
             state.eventLocations = []
+        },
+        setOnLoadZoomToLoc: (state, action) => {
+            state.onLoadZoomToLoc = action.payload.onLoadZoomToLoc;
         }
     },
     extraReducers: (builder) =>  {
@@ -349,7 +372,7 @@ const RTDatabaseSlice = createSlice({
     
 });
 
-export const { setFriendToken, setCurrentLocation, setLoadFriendsLocation, setTempEvent, setPendingFriend, setLoadEvents, resetPendingFriend, resetTempEvent, resetEventLocations} = RTDatabaseSlice.actions;
+export const { setFriendToken, setCurrentLocation, setLoadFriendsLocation, setTempEvent, setPendingFriend, setLoadEvents, setOnLoadZoomToLoc ,resetPendingFriend, resetTempEvent, resetEventLocations} = RTDatabaseSlice.actions;
 
 export const selectCurrentLocation = (state) => state.realtimeDatabase.loc;
 export const selectCurrentLocationIsLoaded = (state) => state.realtimeDatabase.currentLocIsLoaded;
@@ -360,5 +383,6 @@ export const selectFriendToken = (state) => state.realtimeDatabase.friendToken;
 export const selectPendingFriendToken = (state) => state.realtimeDatabase.pendingFriendToken;
 export const selectPendingFriendUsername = (state) => state.realtimeDatabase.pendingFriendUsername;
 export const selectLoadEvents = (state) => state.realtimeDatabase.loadEvents;
+export const selectOnLoadZoomToLoc = (state) => state.realtimeDatabase.onLoadZoomToLoc
 
 export default RTDatabaseSlice.reducer;
