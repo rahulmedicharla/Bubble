@@ -17,6 +17,8 @@ import { addFriendToList, getFriendsList } from '../redux/firestoreSlice';
 //Sharing imports
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
+import { List } from 'react-native-paper';
+import { ModalEventRight } from './subComponents/modalEventRight';
 
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
@@ -279,31 +281,34 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
               {/* SHOW VIEW EVENTS DATA */}
               {showViewEventData == true ? (
                 <View>
-                  {eventLocations.map((event) => {
-                    return (
-                      <View key={event.key}>
-                        <Text>{event.title} at {event.location} @ {event.time}</Text>
-                        <Text>Created by {event.creator.name}</Text>
-                        {event.pendingResponses.map((response) => {
-                          if(response.token == friendToken && response.status == 'Unanswered' ){
-                            return (
-                            <View key = {response.token}>
-                              <Text>You are {response.status}</Text>
-                              <Button title = "Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Attending')}}></Button>
-                              <Button title = "Dont Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Not Attending')}}></Button>
-                            </View>);
-                          }else{
-                            return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status}</Text>)
-                          }
-                        })}
-                        {event.creator.token == friendToken ? (
-                          <View>
-                            <Button title = "Delete Event" onPress={() => {deleteEvent(friendsList, friendToken, event.key)}}></Button>
+                  <List.AccordionGroup>
+                    {eventLocations.map((event) => {
+                      return (
+                        <List.Accordion right={(props) => <ModalEventRight props = {props.isExpanded}></ModalEventRight>} titleStyle={styles.eventTitleStyle} theme={{colors: {background: 'transparent', primary: 'black'} }}  key={event.key} id={event.key} title = {event.title + 'at ' + event.time}>
+                          <View styles={styles.viewEventContainer}>
+                            <Text>Created by {event.creator.name}</Text>
+                            {event.pendingResponses.map((response) => {
+                              if(response.token == friendToken && response.status == 'Unanswered' ){
+                                return (
+                                <View key = {response.token}>
+                                  <Text>You are {response.status}</Text>
+                                  <Button title = "Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Attending')}}></Button>
+                                  <Button title = "Dont Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Not Attending')}}></Button>
+                                </View>);
+                              }else{
+                                return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status}</Text>)
+                              }
+                            })}
+                            {event.creator.token == friendToken ? (
+                              <View>
+                                <Button title = "Delete Event" onPress={() => {deleteEvent(friendsList, friendToken, event.key)}}></Button>
+                              </View>
+                            ):null}
                           </View>
-                        ):null}
-                      </View>
-                    );
-                  })}
+                        </List.Accordion>
+                      );
+                    })}
+                  </List.AccordionGroup>
                 </View>
               ):null}
             </ImageBackground>
@@ -477,5 +482,13 @@ const styles = StyleSheet.create({
     fontFamily: 'TextLight',
     fontSize: 10,
     marginLeft: '16%'
+  },
+  eventTitleStyle: {
+    fontFamily: 'TextBold',
+    fontSize: 18,
+    marginLeft: 34
+  },
+  viewEventContainer: {
+    marginLeft: 50
   }
 });

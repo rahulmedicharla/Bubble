@@ -7,8 +7,7 @@ import { Provider } from 'react-redux/';
 import { store } from './redux/store';
 import AppRoute from './Navigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getDatabase } from 'firebase/database';
-import { getFirestore } from 'firebase/firestore';
+import { Provider as PaperProvider } from 'react-native-paper';
 
 //initializing firbase
 const app = initializeApp(firebaseConfig); 
@@ -16,10 +15,13 @@ initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage)
 })
 
+
 export default function App() { 
     return(
       <Provider store={store}>
-        <AppRoute></AppRoute>
+        <PaperProvider>
+          <AppRoute></AppRoute>
+        </PaperProvider>
       </Provider>
   );
 }
