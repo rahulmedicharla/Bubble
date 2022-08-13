@@ -1,8 +1,8 @@
 //react imports
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity, Share, Keyboard } from 'react-native';
-import MapView, { Callout, CalloutSubview, Marker } from 'react-native-maps';
+import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity, Share, Keyboard, Image, ImageBackground, ScrollView } from 'react-native';
+import MapView, { Callout, Marker } from 'react-native-maps';
 import { Formik } from "formik";
 import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons'; 
@@ -28,13 +28,17 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
 
   //view states
   const [eventSelectionVisible,setEventSelectionVisible] = useState(false); 
+
   const [showCreateEventData, setCreateEventData] = useState(false);
   const [showViewEventData, setShowViewEventData] = useState(false);
+  const [showAddFriendData, setShowAddFriendData] = useState(false);
+
   const [eventSelectionButtonVisible, setEventSelectionButtonVisible] = useState(true);
 
   //react temp consts
   const map = useRef(null);
   const tempEventRef = useRef(null);
+  const timeInput = useRef(null);
 
   //AddFriends Modal Consts
   const sheetRef = useRef(null);
@@ -162,18 +166,18 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
       dispatch(setOnLoadZoomToLoc({onLoadZoomToLoc: false}))
     }
     //timer to update loc
-    if(updateList != null && updateList.length > 0){
-      const timer = setTimeout(() => {
-        dispatch(getCurrentLocation()).then(() => {
-          console.log('updating');
-          updateLoc(currentLoc, updateList);
-        });
-      }, 60000)
+    // if(updateList != null && updateList.length > 0){
+    //   const timer = setTimeout(() => {
+    //     dispatch(getCurrentLocation()).then(() => {
+    //       console.log('updating');
+    //       updateLoc(currentLoc, updateList);
+    //     });
+    //   }, 60000)
   
-      return () => {
-        clearTimeout(timer);
-      }
-    }
+    //   return () => {
+    //     clearTimeout(timer);
+    //   }
+    // }
   }, [currentLoc, updateList, onLoadZoomToLoc])
 
   const createTempEvent = (e) => {
@@ -222,84 +226,102 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
             </Marker>
           ):null}
         </MapView>
-        <BottomSheet ref={sheetRef} snapPoints={snapPoints} enablePanDownToClose index={-1} onClose={() => {
+        <BottomSheet handleStyle={{backgroundColor: '#E8E4F4'}}  ref={sheetRef} snapPoints={snapPoints} enablePanDownToClose index={-1} onClose={() => {
           Keyboard.dismiss();
           setEventSelectionButtonVisible(true);
         }}>
           <BottomSheetView>
-
-            {/* SHOW CREATE EVENT DATA */}
-            {showCreateEventData == true ? (
-              <Formik initialValues={{title: '', location: '', time: ''}} onSubmit={(values) => {changeTempToPermanentEvent(values.title, values.location, values.time, tempEvent.latLng, friendToken, friendsList, username)}}>
-              {({handleChange, handleSubmit, values}) => (
-                <View style = {styles.modalViewContainer}>
-                  <Text style = {styles.createEventText}>CREATE EVENT</Text>
-                  <View style={styles.createEventContainer}>
-                    <TextInput style={[styles.createEventInputs, styles.createEventName]} placeholder="EVENT NAME" onChangeText={handleChange('title')} value = {values.title}></TextInput>
-                    <Text style = {styles.createEventText}>at</Text>
-                    <TextInput style={[styles.createEventInputs, styles.createEventTime]} keyboardType={'number-pad'} placeholder="TIME" onChangeText={handleChange('time')} value = {values.time}></TextInput>
-                  </View>
-                  <Text style = {styles.createEventText}>SUGGEST LOCATION</Text>
-                  <View style={styles.createEventContainer}>
-                    <TextInput style={[styles.createEventInputs, styles.createEventLocation]} placeholder="LOCATION" onChangeText={handleChange('location')} value = {values.location}></TextInput>
-                  </View>
-                  <Button title = "Create event" onPress={handleSubmit}></Button>
-                </View>
-              )}
-              </Formik>
-            ):null}
-
-            {/* SHOW VIEW EVENTS DATA */}
-            {showViewEventData == true ? (
-              <View>
-                {eventLocations.map((event) => {
-                  return (
-                    <View key={event.creator.token}>
-                      <Text>{event.title} at {event.location} @ {event.time}</Text>
-                      <Text>Created by {event.creator.name}</Text>
-                      {event.pendingResponses.map((response) => {
-                        if(response.token == friendToken && response.status == 'Unanswered' ){
-                          return (
-                          <View key = {response.token}>
-                            <Text>You are {response.status}</Text>
-                            <Button title = "Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Attending')}}></Button>
-                            <Button title = "Dont Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Not Attending')}}></Button>
-                          </View>);
-                        }else{
-                          return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status}</Text>)
-                        }
-                      })}
-                      {event.creator.token == friendToken ? (
-                        <View>
-                          <Button title = "Delete Event" onPress={() => {deleteEvent(friendsList, friendToken, event.key)}}></Button>
-                        </View>
-                      ):null}
-                    </View>
-                  );
-                })}
-              </View>
-            ):null}
-            <Text>Friends</Text>
-            {friendsList.map(friend => {
-              return (<Text key={friend.token}>{friend.token} + {friend.name}</Text>)
-            })}
-            <TouchableOpacity onPress={() => shareFriendToken(friendToken, username)}>
-              <MaterialCommunityIcons name="share" size={40} color="black"></MaterialCommunityIcons>
-            </TouchableOpacity>
-            {pendingFriendToken != null ? (
+            <ImageBackground style= {styles.modalBackground} source={require('../assets/background.png')}>
+              {/* SHOW ADD FRIEND DATA */}
+              {showAddFriendData == true ? (
                 <View>
-                  <Text>Accept Friend Request from {pendingFriendUsername}</Text>
-                  <Button title= "accept" onPress={isValidRequest}></Button>
-                  <Button title = "deny" onPress={denyFriendRequest}></Button>
+                  <Text>Friends</Text>
+                  {friendsList.map(friend => {
+                    return (<Text key={friend.token}>{friend.token} + {friend.name}</Text>)
+                  })}
+                  <TouchableOpacity onPress={() => shareFriendToken(friendToken, username)}>
+                    <MaterialCommunityIcons name="share" size={40} color="black"></MaterialCommunityIcons>
+                  </TouchableOpacity>
+                  {pendingFriendToken != null ? (
+                      <View>
+                        <Text>Accept Friend Request from {pendingFriendUsername}</Text>
+                        <Button title= "accept" onPress={isValidRequest}></Button>
+                        <Button title = "deny" onPress={denyFriendRequest}></Button>
+                      </View>
+                  ):null}
                 </View>
-            ):null}
+              ):null}
+
+              {/* SHOW CREATE EVENT DATA */}
+              {showCreateEventData == true ? (
+                <Formik initialValues={{title: '', location: '', time: ''}} onSubmit={(values) => {changeTempToPermanentEvent(values.title, values.location, values.time, tempEvent.latLng, friendToken, friendsList, username)}}>
+                {({handleChange, handleSubmit, values}) => (
+                  <View style = {styles.modalViewContainer}>
+                    <Text style = {styles.createEventText}>Create Event</Text>
+                    <View style={styles.createEventContainer}>
+                      <TextInput style={[styles.createEventInputs, styles.createEventName]} placeholderTextColor='#AFB9BF' placeholder="Name the event" onChangeText={handleChange('title')} value = {values.title}></TextInput>
+                      <Text style = {[styles.createEventText, styles.atText]}>at</Text>
+                      <TextInput ref={timeInput} style={[styles.createEventInputs, styles.createEventTime]} placeholderTextColor='#AFB9BF' keyboardType={'number-pad'} placeholder="0:00" onChangeText={handleChange('time')} value = {values.time}></TextInput>
+                    </View>
+                    <View style={styles.createEventContainer}>
+                      <TextInput style={[styles.createEventInputs, styles.createEventLocation]} placeholderTextColor='#AFB9BF' placeholder="Suggest a Location" onChangeText={handleChange('location')} value = {values.location}></TextInput>
+                    </View>
+                    <TouchableOpacity style={styles.createEventButton} onPress={handleSubmit}>
+                      <Image style={styles.selectionEmoji} source={require('../assets/emojis/createEvent.png')}></Image>
+                      <Text style = {styles.selectionText}>Create Event</Text>
+                    </TouchableOpacity>
+                    <Text style = {styles.smallText}>Once you create, your friends will be notified</Text>
+                  </View>
+                )}
+                </Formik>
+              ):null}
+
+              {/* SHOW VIEW EVENTS DATA */}
+              {showViewEventData == true ? (
+                <View>
+                  {eventLocations.map((event) => {
+                    return (
+                      <View key={event.key}>
+                        <Text>{event.title} at {event.location} @ {event.time}</Text>
+                        <Text>Created by {event.creator.name}</Text>
+                        {event.pendingResponses.map((response) => {
+                          if(response.token == friendToken && response.status == 'Unanswered' ){
+                            return (
+                            <View key = {response.token}>
+                              <Text>You are {response.status}</Text>
+                              <Button title = "Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Attending')}}></Button>
+                              <Button title = "Dont Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Not Attending')}}></Button>
+                            </View>);
+                          }else{
+                            return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status}</Text>)
+                          }
+                        })}
+                        {event.creator.token == friendToken ? (
+                          <View>
+                            <Button title = "Delete Event" onPress={() => {deleteEvent(friendsList, friendToken, event.key)}}></Button>
+                          </View>
+                        ):null}
+                      </View>
+                    );
+                  })}
+                </View>
+              ):null}
+            </ImageBackground>
           </BottomSheetView>
         </BottomSheet>
 
         {eventSelectionVisible == true ? (
           <View style={styles.footerSelection}>
-            <TouchableOpacity style={styles.selectionButton} onPress={() => {setEventSelectionVisible(false)}}>
-              <MaterialIcons name="cancel" size={30} color="white"></MaterialIcons>
+            <TouchableOpacity style={styles.customSelection} onPress={() => {
+              sheetRef.current.collapse();
+              setEventSelectionVisible(false);
+              setEventSelectionButtonVisible(false);
+              setCreateEventData(false);
+              setShowViewEventData(false);
+              setShowAddFriendData(true);
+            }}>
+              <Image style={styles.selectionEmoji} source={require('../assets/emojis/addFriends.png')}></Image>
+              <Text style = {styles.selectionText}>Add Friends</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.customSelection} onPress={() => {
@@ -308,8 +330,10 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
               setEventSelectionButtonVisible(false);
               setCreateEventData(true);
               setShowViewEventData(false);
+              setShowAddFriendData(false);
             }}>
-              <Text style = {styles.selectionText}>CREATE EVENT</Text>
+              <Image style={styles.selectionEmoji} source={require('../assets/emojis/createEvent.png')}></Image>
+              <Text style = {styles.selectionText}>Create Event</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.customSelection} onPress={() => {
@@ -318,16 +342,21 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
               setEventSelectionButtonVisible(false);
               setCreateEventData(false);
               setShowViewEventData(true);
+              setShowAddFriendData(false);
             }}>
-              <Text style = {styles.selectionText}>VIEW EVENTS</Text>
+              <Image style={styles.selectionEmoji} source={require('../assets/emojis/viewEvents.png')}></Image>
+              <Text style = {styles.selectionText}>View Events</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.selectionButton} onPress={() => {setEventSelectionVisible(false)}}>
+              <Image source={require('../assets/selectionIcons/cancelSelection.png')}></Image>
+            </TouchableOpacity>
           </View>
         ):(
           <View style={styles.footerButton}>
             {eventSelectionButtonVisible == true ? (
               <TouchableOpacity onPress={() => {setEventSelectionVisible(true)}}>
-                <Ionicons name="md-menu" size={40} color="black"></Ionicons>
+                <Image source={require('../assets/selectionIcons/selectModal.png')}></Image>
               </TouchableOpacity> 
             ):null}            
           </View>
@@ -351,7 +380,7 @@ const styles = StyleSheet.create({
   footerButton: {
     position: 'absolute',
     zIndex: 10,
-    bottom: 30,
+    bottom: 35,
     right: 25
   },
   footerSelection: {
@@ -361,47 +390,92 @@ const styles = StyleSheet.create({
     bottom: 30,
     alignItems: 'flex-end'
   },
+  backgroundImg: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  modalBackground: {
+    height: '100%',
+  },
   modalViewContainer:{
-    marginLeft: 17
+    marginLeft: 35,
+  },
+  selectionEmoji: {
+    marginLeft: 13
   },
   selectionButton: {
-    marginBottom: 10
+    marginBottom: 5
   },
   customSelection: {
-    marginBottom: 10,
+    marginBottom: 17,
     backgroundColor: 'white',
-    borderRadius: 10
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center'
   },
   selectionText: {
-    fontFamily: 'TextNormal',
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingTop: 5,
-    paddingBottom: 5
+    fontFamily: 'TextBold',
+    marginLeft: 11,
+    paddingRight: 29,
+    paddingTop: 10,
+    paddingBottom: 9,
+    color: '#454A4D',
+    fontSize: 15,
 
   },
   createEventText: {
-    fontFamily: 'TextNormal',
+    fontFamily: 'TextBold',
     fontSize: 17,
+    marginTop: 30
   },
   createEventInputs: {
     backgroundColor: '#D3D3D3',
     marginTop: 5,
-    paddingTop: 10,
-    paddingBottom: 10,
-    paddingLeft: 5,
-    paddingRight: 10
+    paddingLeft: 16,
+    paddingRight: 10,
+    borderRadius: 7,
+    fontFamily: "TextBold",
+    color: '#AFB9BF',
+    backgroundColor: '#FFFFFF66',
+    fontSize: 14
   },
   createEventName: {
-    width: 120
+    width: '45%'
   },
   createEventTime: {
-    width: 60
+    width: '18%'
   },
   createEventLocation: {
-    width: 300
+    width: '89%',
+    paddingTop: 13,
+    paddingBottom: 13
   },
   createEventContainer: {
-    flexDirection: 'row'
+    flexDirection: 'row',
+    marginTop: 16,
+  },
+  createEventButton: {
+    flexDirection:'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    width: 158,
+    borderRadius: 5,
+    marginTop: 42,
+    paddingTop: 2,
+    paddingBottom: 2,
+    marginLeft: '23%'
+  },
+  atText: {
+    marginLeft: 17,
+    marginRight: 17,
+    bottom: 12
+  },
+  smallText: {
+    marginTop: 18,
+    fontFamily: 'TextLight',
+    fontSize: 10,
+    marginLeft: '16%'
   }
 });

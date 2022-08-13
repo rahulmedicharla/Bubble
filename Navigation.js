@@ -26,7 +26,7 @@ import { getAuth } from 'firebase/auth';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
-import { HeaderRightButton } from './views/headerButtons/HeaderRight';
+import { HeaderRightButton } from './views/subComponents/HeaderRight';
 import { Asset } from 'expo-asset';
 
 const Stack = createStackNavigator();
@@ -64,6 +64,15 @@ export default function AppRoute(){
     const pendingFriendToken = useSelector(selectPendingFriendToken);
     const pendingFriendUsername = useSelector(selectPendingFriendUsername);
 
+    const imagesToLoad =  [
+        require('./assets/background.png'), 
+        require('./assets/logo.png'),
+        require('./assets/selectionIcons/cancelSelection.png'),
+        require('./assets/selectionIcons/selectModal.png'),
+        require('./assets/emojis/viewEvents.png'),
+        require('./assets/emojis/createEvent.png'),
+        require('./assets/emojis/addFriends.png')
+    ]
 
     const loadFonts = async() => {
         await Font.loadAsync({
@@ -72,6 +81,12 @@ export default function AppRoute(){
             'TextNormal': require('./assets/fonts/AlbertSans-Regular.ttf')
         })
 
+    }
+
+    const loadImages = () => {
+        imagesToLoad.map((image) => {
+            Asset.fromModule(image).downloadAsync();
+        })
     }
 
     const getInitialUrl = async() => {
@@ -103,7 +118,7 @@ export default function AppRoute(){
         }
 
         loadFonts().then(() => {
-            Asset.fromModule(require('./assets/background.png')).downloadAsync();
+            loadImages();
             dispatch(setFontIsLoaded({fontIsLoaded: true}));
         })
 
@@ -193,7 +208,7 @@ export default function AppRoute(){
                                         username = {username}></HomePage>}>
                                     </Stack.Screen>
 
-                                    <Stack.Screen name="Profile" options={{headerBackTitleVisible :false}} children={(props) => <ProfilePage {...props}
+                                    <Stack.Screen name="Profile" options={{headerShown :false}} children={(props) => <ProfilePage {...props}
                                         username = {username}
                                         userToken = {userToken}
                                         friendToken = {friendToken}></ProfilePage>}>

@@ -4,14 +4,21 @@ import { StyleSheet, View, Text, Button} from "react-native";
 //firebase imports
 import { getAuth, signOut } from 'firebase/auth';
 //redux imports
-import { useDispatch } from 'react-redux/';
-import { setSignOut } from '../redux/authSlice';
 
 export const ProfilePage = ({navigation, username, userToken, friendToken}) => {
 
+
+
+  const handleAuth = () => {
+    try{
+      //calendar.handleAuthClick();
+    }catch(e){
+      console.log(e)
+    }
+  }
+
   const auth = getAuth();
 
-  const dispatch = useDispatch();
  
   const signUserOut = () => {
     signOut(auth);
@@ -25,6 +32,7 @@ export const ProfilePage = ({navigation, username, userToken, friendToken}) => {
         <Button title = "signOut" onPress={signUserOut}></Button>
         <Text>Friend Token</Text>
         <Text>{friendToken}</Text>
+        <Button title = "Signin Calendar" onPress={() => {handleAuth}}></Button>
       </View>
     );
 }
@@ -35,5 +43,6 @@ const styles = StyleSheet.create({
       backgroundColor: '#fff',
       alignItems: 'center',
       justifyContent: 'center',
+      height: '100%'
     },
   });

@@ -31,9 +31,6 @@ export const SignUpPage = ({navigation, verificationCode}) => {
         setValue,
     });
 
-    const [checkBoxOne, setCheckBoxOne] = useState(false);
-    const [checkBoxTwo, setCheckBoxTwo] = useState(false);
-
     const dispatch = useDispatch();
 
     const goBack = () => {

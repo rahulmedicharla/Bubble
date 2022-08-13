@@ -11,6 +11,9 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
 
   const dispatch = useDispatch();
 
+  const [checkBoxOne, setCheckBoxOne] = useState(false);
+  const [checkBoxTwo, setCheckBoxTwo] = useState(false);
+
   const storeUsername =  (name) => {
     if(name.length > 0){
       newUserDoc(userToken, name).then(() => {
