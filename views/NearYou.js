@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
 
 //redux imports
-import { acceptFriendRequest, addFriend, createEvent, deleteEvent, getCurrentLocation, getEvents, getFriendsLocation, getPendingFriendRequestData, resetEventLocations, resetMyPendingFriendRequest, resetPendingFriend, resetTempEvent, setLoadEvents, setOnLoadZoomToLoc, setTempEvent, updateLoc, updateYourStatusInEvent } from '../redux/RTDatabseSlice';
+import { acceptFriendRequest, addFriend, createEvent, deleteEvent, getCurrentLocation, getEvents, getFriendsLocation, getFriendsRSVPEvents, getPendingFriendRequestData, resetEventLocations, resetFriendEvents, resetMyPendingFriendRequest, resetPendingFriend, resetTempEvent, rsvpToAnothersEvent, setLoadEvents, setOnLoadZoomToLoc, setTempEvent, updateLoc, updateYourStatusInEvent } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
 import { getDatabase, off, onValue, ref, update } from 'firebase/database';
 import { addFriendToList, getFriendsList } from '../redux/firestoreSlice';
@@ -23,7 +23,7 @@ import { ModalEventRight } from './subComponents/modalEventRight';
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
 
-export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, eventLocations, friendToken,
+export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, eventLocations, friendsEvents, friendToken,
   username, friendsList, updateList, pendingFriendToken, pendingFriendUsername, onLoadZoomToLoc, currentLoc}) => {
 
   const db = getDatabase();
@@ -93,6 +93,21 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
       sheetRef.current.collapse();
     })
 
+    // SEEING FRIENDS EVENTS
+    const friendsEventData = ref(db, friendToken + '/friendsPendingEvent/');
+    onValue(friendsEventData, (snapshot) => {
+      dispatch(resetFriendEvents());
+      if(snapshot.exists()){
+        snapshot.forEach((child) => {
+          dispatch(getFriendsRSVPEvents({
+            path: child.val().path,
+            name: child.val().name,
+            token: child.key
+          }))
+        })
+      }
+    })
+
     // EVENTS WITH FRIENDS
 
     const eventsData = ref(db, friendToken + '/pendingEvent/');
@@ -102,7 +117,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
         snapshot.forEach((child) => {
           dispatch(getEvents({
             key: child.key,
-            val: child.val().friendToken
+            val: child.val().friendToken,
           }))
         })
       }
@@ -146,6 +161,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
       keyboardOn.remove();
       keyboardOff.remove();
 
+      off(friendsEventData);
       off(eventsData);
       off(friendsLocationData);
       off(pendingFriendRequest)
@@ -213,10 +229,10 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
             return (<Marker title={marker.name} key={marker.friendToken} coordinate={marker.latLng}></Marker>)
           })}
           {eventLocations.map(marker => {
-            return (<Marker title={marker.title} key={marker.title} coordinate={marker.latLng}>
+            return (<Marker title={marker.origin.title} key={marker.origin.title} coordinate={marker.origin.latLng}>
               <Callout>
-                <Text>{marker.title} @ {marker.time} @ {marker.location}</Text>
-                <Text>Created by {marker.creator.name}</Text>
+                <Text>{marker.origin.title} @ {marker.origin.time} @ {marker.origin.location}</Text>
+                <Text>Created by {marker.origin.creator.name}</Text>
               </Callout>
             </Marker>)
           })}
@@ -251,6 +267,17 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
                         <Button title = "deny" onPress={denyFriendRequest}></Button>
                       </View>
                   ):null}
+                  <Text>Friends Events</Text>
+                  {friendsEvents.map((friend) => {
+                    return(
+                      <View key={friend.origin.key}>
+                        <Text>{friend.name} is attending {friend.origin.title} at {friend.origin.time}</Text>
+                        <Text>{friend.name} is attending with {friend.origin.creator.name}</Text>
+                        <Button title = "attend" onPress={() => {rsvpToAnothersEvent(friend.origin.creator.token, friend.origin.key, username, friendToken, friend.origin.pendingResponses, friend.name, friend.token, friendsList)}}></Button>
+                        <Button title = 'dont attend'></Button>
+                      </View>  
+                    );
+                  })}
                 </View>
               ):null}
 
@@ -284,24 +311,28 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, tempEvent, 
                   <List.AccordionGroup>
                     {eventLocations.map((event) => {
                       return (
-                        <List.Accordion right={(props) => <ModalEventRight props = {props.isExpanded}></ModalEventRight>} titleStyle={styles.eventTitleStyle} theme={{colors: {background: 'transparent', primary: 'black'} }}  key={event.key} id={event.key} title = {event.title + 'at ' + event.time}>
+                        <List.Accordion right={(props) => <ModalEventRight props = {props.isExpanded}></ModalEventRight>} titleStyle={styles.eventTitleStyle} theme={{colors: {background: 'transparent', primary: 'black'} }}  key={event.origin.key} id={event.origin.key} title = {event.origin.title + 'at ' + event.origin.time}>
                           <View styles={styles.viewEventContainer}>
-                            <Text>Created by {event.creator.name}</Text>
-                            {event.pendingResponses.map((response) => {
+                            <Text>Created by {event.origin.creator.name}</Text>
+                            {event.origin.pendingResponses.map((response) => {
                               if(response.token == friendToken && response.status == 'Unanswered' ){
                                 return (
                                 <View key = {response.token}>
                                   <Text>You are {response.status}</Text>
-                                  <Button title = "Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Attending')}}></Button>
-                                  <Button title = "Dont Attend" onPress={() => {updateYourStatusInEvent(event.pendingResponses, event.creator.token, event.key, friendToken, 'Not Attending')}}></Button>
+                                  <Button title = "Attend" onPress={() => {updateYourStatusInEvent(event.origin.pendingResponses, event.origin.creator.token, event.origin.key, friendToken, friendsList, username, 'Attending')}}></Button>
+                                  <Button title = "Dont Attend" onPress={() => {updateYourStatusInEvent(event.origin.pendingResponses, event.origin.creator.token, event.origin.key, friendToken, friendsList, username, 'Not Attending')}}></Button>
                                 </View>);
                               }else{
-                                return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status}</Text>)
+                                if(response.friendOf != null){
+                                  return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status} and is friend of {response.friendOf}</Text>)
+                                }else{
+                                  return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status}</Text>)
+                                }
                               }
                             })}
-                            {event.creator.token == friendToken ? (
+                            {event.origin.creator.token == friendToken ? (
                               <View>
-                                <Button title = "Delete Event" onPress={() => {deleteEvent(friendsList, friendToken, event.key)}}></Button>
+                                <Button title = "Delete Event" onPress={() => {deleteEvent(event.origin.deletePaths, friendToken, event.origin.key)}}></Button>
                               </View>
                             ):null}
                           </View>

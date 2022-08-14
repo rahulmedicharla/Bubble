@@ -1,7 +1,75 @@
 import { async } from "@firebase/util";
+import { KEYBOARD_BLUR_BEHAVIOR } from "@gorhom/bottom-sheet";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { getCurrentPositionAsync, requestForegroundPermissionsAsync } from "expo-location";
 import { child, get, getDatabase, push, ref, remove, set, update } from 'firebase/database';
+
+/*
+
+    VIEWING EVENTS OF FRIENDS
+
+*/
+
+export const rsvpToAnothersEvent = (creator, key, username, friendToken, pendingResponses, friendOf, friendOfToken, friendsList) => {
+    const db = getDatabase();
+
+    get(child(ref(db), 'events/' + creator + '/' + key + '/pendingResponses/')).then((snapshot) => {
+        update(ref(db, 'events/' + creator + '/' + key + '/pendingResponses/'), {
+            [Object.keys(snapshot).length -1]: {
+                name: username,
+                token: friendToken,
+                status: 'Attending',
+                friendOf: friendOf
+            }
+        }).then(() => {
+            updateFriendOfEvent(friendToken, creator, key).then(() => {
+                
+                remove(ref(db, friendToken + '/friendsPendingEvent/' + friendOfToken));
+
+                updateMyFriendsOfAnothersEvent(friendsList, friendOfToken, username,creator, key, friendToken);
+
+                updateStatusToRerender(pendingResponses, key);
+            })
+        })
+    }); 
+}
+
+const updateMyFriendsOfAnothersEvent = (friendsList, token, name, creator, key, myToken) => {
+    const db = getDatabase();
+
+    const tokenArray = friendsList.map((friend) => {return friend.token})
+    tokenArray.map((friend) => {
+        if(friend!= token){
+            get(child(ref(db), friend + '/friendsPendingEvent/')).then((snapshot) => {
+                if(snapshot.exists()){
+                    update(ref(db, friend + '/friendsPendingEvent/'), {
+                        [myToken]: {
+                            name: name,
+                            path: creator + '/' + key
+                        }
+                    }).then(() => {
+                        
+                    })
+                }else{
+                    console.log('running');
+                    set(ref(db, friend + '/friendsPendingEvent/'), {
+                        [myToken]: {
+                            name: name,
+                            path: creator + '/' + key
+                        }
+                    }).then(() => {
+                        console.log(creator + key + myToken);
+                        update(ref(db, 'events/' + creator + '/' + key + '/deletePaths'), {
+                            [myToken]: key
+                        })
+                    })
+                }
+            });
+        }
+    })
+}
+
+
 
 /*
 
@@ -33,7 +101,7 @@ const createGlobalEventRef = async (title, location, time, latLng, friendToken, 
     list.push({
         name: username,
         token: friendToken,
-        status: 'Unanswered'
+        status: 'Attending'
     })
     friendsList.map((friend) => {
         list.push({
@@ -57,7 +125,10 @@ const createGlobalEventRef = async (title, location, time, latLng, friendToken, 
         time: time, 
         latLng: latLng,
         key: newPostRef.key,
-        pendingResponses: list
+        pendingResponses: list,
+        deletePaths: {
+            [friendToken]: newPostRef.key
+        }
     }    
 
     await set(newPostRef, upload);
@@ -65,7 +136,7 @@ const createGlobalEventRef = async (title, location, time, latLng, friendToken, 
     return newPostRef.key;
 }
 
-const updateFriendOfEvent = (otherFriendToken, friendToken, key) => {
+const updateFriendOfEvent = async(otherFriendToken, friendToken, key) => {
     const db = getDatabase();
 
     get(child(ref(db), otherFriendToken + '/pendingEvent/')).then((snapshot) => {
@@ -73,15 +144,21 @@ const updateFriendOfEvent = (otherFriendToken, friendToken, key) => {
             update(ref(db, otherFriendToken + '/pendingEvent/'), {
                 [key]: {
                     friendToken: friendToken,
-                    status: 0
+                    status: 0,
                 }
+            })
+            update(ref(db, 'events/' + friendToken + '/' + key + '/deletePaths'), {
+                [otherFriendToken]: key
             })
         }else{
             set(ref(db, otherFriendToken + '/pendingEvent/'), {
                 [key]: {
                     friendToken: friendToken,
-                    status: 0
+                    status: 0,
                 }
+            })
+            update(ref(db, 'events/' + friendToken + '/' + key + '/deletePaths'), {
+                [otherFriendToken]: key
             })
         }
     });
@@ -96,29 +173,33 @@ export const createEvent = (title, location, time, latLng, friendToken, friendsL
     })
 }
 
-export const deleteEvent = (friendsList, friendToken, key) => {
+export const deleteEvent = (deletePaths, friendToken, key) => {
     const db = getDatabase();
 
     remove(ref(db, 'events/' + friendToken + '/' + key));
 
-    remove(ref(db, friendToken + '/pendingEvent/' + key));
-    friendsList.map((friend) => {
-        remove(ref(db, friend.token + '/pendingEvent/' + key));
-    })
+    for(let [key, val] of Object.entries(deletePaths)) {
+        remove(ref(db, key + '/pendingEvent/' + val));
+        remove(ref(db, key + '/friendsPendingEvent/' + val));
+    }
 
 }
 
-export const updateYourStatusInEvent = async (pendingResponses, creator, key, friendToken, newStatus) => {
+export const updateYourStatusInEvent = (pendingResponses, creator, key, friendToken, friendsList, username, newStatus) => {
     const db = getDatabase();
+
 
     get(child(ref(db), 'events/' + creator + '/' + key + '/pendingResponses/')).then((snapshot) => {
         let counter = 0;
+        if(newStatus == 'Attending'){
+            updateMyFriendsOfAnothersEvent(friendsList, creator, username, creator, key, friendToken);
+        }
         snapshot.forEach((response) => {
             if(response.val().token == friendToken){
                 update(ref(db, 'events/' + creator + '/' + key + '/pendingResponses/' + counter + '/'), {
                     status: newStatus
                 }).then(() => {
-                    updateStausToRerender(pendingResponses, key, friendToken);
+                    updateStatusToRerender(pendingResponses, key, friendToken);
                 })
             }
             counter++;
@@ -126,14 +207,14 @@ export const updateYourStatusInEvent = async (pendingResponses, creator, key, fr
     });
 }
 
-const updateStausToRerender = (pendingResponses , key, friendToken) => {
+const updateStatusToRerender = (pendingResponses , key) => {
     const db = getDatabase();
-    get(child(ref(db), friendToken + '/pendingEvent/' + key + '/status')).then((val) => {
-        pendingResponses.map((response) => {    
+    pendingResponses.map((response) => {
+        get(child(ref(db), response.token + '/pendingEvent/' + key + '/status')).then((val) => {    
             update(ref(db, response.token + '/pendingEvent/' + key), {
                 status: parseInt(val.val()) + 1
             })
-        })
+        })  
     })
 }
 
@@ -213,13 +294,31 @@ export const resetMyPendingFriendRequest = async (friendToken) => {
 
 */
 
+export const getFriendsRSVPEvents = createAsyncThunk('realtimeDatabase, getFriendsRSVPEvents', async(data) => {
+    const db = getDatabase();
+
+    const snapshot = await get(child(ref(db), '/events/' + data.path));
+
+    const event = {
+        eventData: {
+            origin: snapshot.val(),
+            name: data.name,
+            token: data.token
+        }
+    }
+
+    return event;  
+})
+
 export const getEvents = createAsyncThunk('realtimeDatabase/getEvents', async(data) => {
     const db = getDatabase();
 
     const snapshot = await get(child(ref(db), '/events/' + data.val + '/' + data.key));
 
     const event = {
-        eventData: snapshot.val()
+        eventData: {
+            origin: snapshot.val(),
+        },
     }
 
     return event;
@@ -316,6 +415,7 @@ export const checkIfNewUser = async(userId) => {
 const initialState = {
     friendsLocation: [],
     eventLocations: [],
+    friendsEvents: [],
     tempEvent: null,
     loc: {},
     currentLocIsLoaded: false,
@@ -353,6 +453,9 @@ const RTDatabaseSlice = createSlice({
         resetEventLocations: (state) => {
             state.eventLocations = []
         },
+        resetFriendEvents: (state) => {
+            state.friendsEvents = []
+        },
         setOnLoadZoomToLoc: (state, action) => {
             state.onLoadZoomToLoc = action.payload.onLoadZoomToLoc;
         }
@@ -368,16 +471,21 @@ const RTDatabaseSlice = createSlice({
         builder.addCase(getEvents.fulfilled, (state, action) => {
             state.eventLocations.push(action.payload.eventData)
         })
+        builder.addCase(getFriendsRSVPEvents.fulfilled, (state, action) => {
+            state.friendsEvents.push(action.payload.eventData);
+        })
     }
     
 });
 
-export const { setFriendToken, setCurrentLocation, setLoadFriendsLocation, setTempEvent, setPendingFriend, setLoadEvents, setOnLoadZoomToLoc ,resetPendingFriend, resetTempEvent, resetEventLocations} = RTDatabaseSlice.actions;
+export const { setFriendToken, setCurrentLocation, setLoadFriendsLocation, setTempEvent, setPendingFriend, setLoadEvents, setOnLoadZoomToLoc ,
+    resetPendingFriend, resetTempEvent, resetEventLocations, resetFriendEvents} = RTDatabaseSlice.actions;
 
 export const selectCurrentLocation = (state) => state.realtimeDatabase.loc;
 export const selectCurrentLocationIsLoaded = (state) => state.realtimeDatabase.currentLocIsLoaded;
 export const selectFriendsLocation = (state) => state.realtimeDatabase.friendsLocation;
 export const selectEventLocations = (state) => state.realtimeDatabase.eventLocations;
+export const selectFriendsEvents = (state) => state.realtimeDatabase.friendsEvents;
 export const selectTempEvent = (state) => state.realtimeDatabase.tempEvent;
 export const selectFriendToken = (state) => state.realtimeDatabase.friendToken;
 export const selectPendingFriendToken = (state) => state.realtimeDatabase.pendingFriendToken;

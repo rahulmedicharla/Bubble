@@ -14,7 +14,7 @@ import { LoadingPage } from './views/Loading';
 import { selectFontIsLoaded, selectIsDeepLinkForeground, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded, setIsDeepLinkForeground, setSignOut } from './redux/authSlice';
 import { useSelector, useDispatch } from 'react-redux/';
 import { selectFriendsList, selectUpdateList, selectUsername } from './redux/firestoreSlice';
-import { checkIfNewUser, newUserRLDB, selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsLocation, selectFriendToken,  
+import { checkIfNewUser, newUserRLDB, selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsEvents, selectFriendsLocation, selectFriendToken,  
     selectOnLoadZoomToLoc,  
     selectPendingFriendToken, selectPendingFriendUsername, selectTempEvent, setPendingFriend} from './redux/RTDatabseSlice';
 import { setSignIn } from "./redux/authSlice";
@@ -55,6 +55,7 @@ export default function AppRoute(){
     const friendsLocation = useSelector(selectFriendsLocation);
     const tempEvent = useSelector(selectTempEvent);
     const eventLocations = useSelector(selectEventLocations);
+    const friendsEvents = useSelector(selectFriendsEvents);
 
     const friendToken = useSelector(selectFriendToken);
     const currentLoc = useSelector(selectCurrentLocation);
@@ -194,6 +195,7 @@ export default function AppRoute(){
                                             friendsLocation = {friendsLocation}
                                             tempEvent = {tempEvent}
                                             eventLocations = {eventLocations}
+                                            friendsEvents = {friendsEvents}
                                             friendToken = {friendToken}
                                             username = {username}
                                             friendsList = {friendsList}

@@ -6,7 +6,7 @@ import { setNewUserFalse } from "../redux/authSlice";
 import { newUserDoc, saveUsername, setUsername } from "../redux/firestoreSlice";
 import { getCurrentLocation } from "../redux/RTDatabseSlice";
 import Checkbox from 'expo-checkbox';
-
+import { useState } from "react";
 export const NewUserSetupPage = ({navigation, userToken}) => {
 
   const dispatch = useDispatch();
