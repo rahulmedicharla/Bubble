@@ -2,7 +2,7 @@ node_modules/
 .expo/
 dist/
 config.js
-calendarKey.js
+GoogleKeys.js
 npm-debug.*
 *.jks
 *.p8

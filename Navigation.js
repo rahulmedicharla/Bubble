@@ -16,7 +16,7 @@ import { useSelector, useDispatch } from 'react-redux/';
 import { selectFriendsList, selectUpdateList, selectUsername } from './redux/firestoreSlice';
 import { checkIfNewUser, newUserRLDB, selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsEvents, selectFriendsLocation, selectFriendToken,  
     selectOnLoadZoomToLoc,  
-    selectPendingFriendToken, selectPendingFriendUsername, selectTempEvent, setPendingFriend} from './redux/RTDatabseSlice';
+    selectPendingFriendToken, selectPendingFriendUsername, setPendingFriend} from './redux/RTDatabseSlice';
 import { setSignIn } from "./redux/authSlice";
 import { getUsername, getFriendsList } from "./redux/firestoreSlice";
 import { getCurrentLocation, setFriendToken } from "./redux/RTDatabseSlice";
@@ -53,7 +53,6 @@ export default function AppRoute(){
 
     //RTDB slice variables
     const friendsLocation = useSelector(selectFriendsLocation);
-    const tempEvent = useSelector(selectTempEvent);
     const eventLocations = useSelector(selectEventLocations);
     const friendsEvents = useSelector(selectFriendsEvents);
 
@@ -193,7 +192,6 @@ export default function AppRoute(){
                                         children={(props) => <NearYouPage {...props} 
                                             userToken = {userToken}
                                             friendsLocation = {friendsLocation}
-                                            tempEvent = {tempEvent}
                                             eventLocations = {eventLocations}
                                             friendsEvents = {friendsEvents}
                                             friendToken = {friendToken}
