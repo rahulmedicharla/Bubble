@@ -269,7 +269,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
 
                 {/* SHOW CREATE EVENT DATA */}
                 {showCreateEventData == true ? (
-                  <Formik initialValues={{title: '', time: ''}} onSubmit={(values) => {changeTempToPermanentEvent(values.title, values.time, friendToken, friendsList, username)}}>
+                  <Formik initialValues={{title: '', time: ''}} onSubmit={(values) => {changeTempToPermanentEvent(values.title.trim(), values.time.trim(), friendToken, friendsList, username)}}>
                   {({handleChange, handleSubmit, values}) => (
                     <View style = {styles.modalViewContainer}>
                       <Text style = {styles.createEventText}>Create Event</Text>
@@ -439,7 +439,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 10,
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    shadowColor: 'rgba(0,0,0, .4)', 
+    shadowOffset: { height: 1, width: 1 }, 
+    shadowOpacity: 1, 
+    shadowRadius: 1, 
   },
   selectionText: {
     fontFamily: 'TextBold',

@@ -26,7 +26,7 @@ export const rsvpToAnothersEvent = (creator, key, username, friendToken, pending
                 
                 remove(ref(db, friendToken + '/friendsPendingEvent/' + friendOfToken));
 
-                updateMyFriendsOfAnothersEvent(friendsList, friendOfToken, username,creator, key, friendToken);
+                updateMyFriendsOfAnothersEvent(pendingResponses, friendsList, username,creator, key, friendToken);
 
                 updateStatusToRerender(pendingResponses, key);
             })
@@ -34,33 +34,41 @@ export const rsvpToAnothersEvent = (creator, key, username, friendToken, pending
     }); 
 }
 
-const updateMyFriendsOfAnothersEvent = (friendsList, token, name, creator, key, myToken) => {
+const updateMyFriendsOfAnothersEvent = (pendingReponses, friendsList, name, creator, key, myToken) => {
     const db = getDatabase();
 
     const tokenArray = friendsList.map((friend) => {return friend.token})
+    
+    let pendingResponsesArray = [];
+    for(let [key, val] of Object.entries(pendingReponses)){
+        pendingResponsesArray.push(val.token);
+    }
+
+
     tokenArray.map((friend) => {
-        if(friend!= token){
+        if(!pendingResponsesArray.includes(friend)){
             get(child(ref(db), friend + '/friendsPendingEvent/')).then((snapshot) => {
                 if(snapshot.exists()){
-                    update(ref(db, friend + '/friendsPendingEvent/'), {
-                        [myToken]: {
-                            name: name,
-                            path: creator + '/' + key
-                        }
+                    update(ref(db, 'events/' + creator + '/' + key + '/deletePaths'), {
+                        [friend]: key
                     }).then(() => {
-                        
+                        update(ref(db, friend + '/friendsPendingEvent/'), {
+                            [myToken]: {
+                                name: name,
+                                path: creator + '/' + key
+                            }
+                        })
                     })
                 }else{
-                    console.log('running');
-                    set(ref(db, friend + '/friendsPendingEvent/'), {
-                        [myToken]: {
-                            name: name,
-                            path: creator + '/' + key
-                        }
+                    update(ref(db, 'events/' + creator + '/' + key + '/deletePaths'), {
+                        [friend]: key
                     }).then(() => {
-                        console.log(creator + key + myToken);
-                        update(ref(db, 'events/' + creator + '/' + key + '/deletePaths'), {
-                            [myToken]: key
+                        console.log('also running');
+                        set(ref(db, friend + '/friendsPendingEvent/'), {
+                            [myToken]: {
+                                name: name,
+                                path: creator + '/' + key
+                            }
                         })
                     })
                 }
@@ -192,7 +200,7 @@ export const updateYourStatusInEvent = (pendingResponses, creator, key, friendTo
     get(child(ref(db), 'events/' + creator + '/' + key + '/pendingResponses/')).then((snapshot) => {
         let counter = 0;
         if(newStatus == 'Attending'){
-            updateMyFriendsOfAnothersEvent(friendsList, creator, username, creator, key, friendToken);
+            updateMyFriendsOfAnothersEvent(pendingResponses, friendsList, username, creator, key, friendToken);
         }
         snapshot.forEach((response) => {
             if(response.val().token == friendToken){
@@ -262,11 +270,6 @@ export const addFriend = async (otherFriendToken, loc, username, myFriendToken) 
     await set(newPostRef, upload);
 
     return newPostRef.key;
-
-     //updating
-    // update(newPostRef, upload).then(() => {
-    //     console.log('update successful');
-    // });
     
 }
 
