@@ -5,14 +5,13 @@ import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity
 import MapView, { Callout, Marker } from 'react-native-maps';
 import { Formik } from "formik";
 import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
-import { Ionicons } from '@expo/vector-icons'; 
-import { MaterialIcons } from '@expo/vector-icons';
 
 //redux imports
-import { acceptFriendRequest, addFriend, createEvent, deleteEvent, getCurrentLocation, getEvents, getFriendsLocation, getFriendsRSVPEvents, getPendingFriendRequestData, resetEventLocations, resetFriendEvents, resetMyPendingFriendRequest, resetPendingFriend, rsvpToAnothersEvent, setLoadEvents, setOnLoadZoomToLoc, updateLoc, updateYourStatusInEvent } from '../redux/RTDatabseSlice';
+import { acceptFriendRequest, addFriend, createEvent, deleteEvent, getCurrentLocation, getEvents, getFriendsLocation, getFriendsRSVPEvents, 
+  getPendingFriendRequestData, resetEventLocations, resetFriendEvents, resetMyPendingFriendRequest, resetPendingFriend, rsvpToAnothersEvent, setOnLoadZoomToLoc, updateLoc, updateYourStatusInEvent } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
 import { getDatabase, off, onValue, ref, update } from 'firebase/database';
-import { addFriendToList, getFriendsList } from '../redux/firestoreSlice';
+import { addFriendToList, getFirestoreData } from '../redux/firestoreSlice';
 
 //Sharing imports
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -26,7 +25,7 @@ import { mapsApiKey } from '../GoogleKeys'
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
 
 export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocations, friendsEvents, friendToken,
-  username, friendsList, updateList, pendingFriendToken, pendingFriendUsername, onLoadZoomToLoc, currentLoc}) => {
+  username, friendsList, pendingFriendToken, pendingFriendUsername, onLoadZoomToLoc, colorScheme, currentLoc}) => {
 
   const db = getDatabase();
 
@@ -40,6 +39,9 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
   const [tempPlace, setTempPlace] = useState(null);
 
   const [eventSelectionButtonVisible, setEventSelectionButtonVisible] = useState(true);
+
+  const [segmentedControl, setSegmentedControl] = useState(true);
+
 
   //react temp consts
   const map = useRef(null);
@@ -95,21 +97,6 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
       sheetRef.current.collapse();
     })
 
-    // SEEING FRIENDS EVENTS
-    const friendsEventData = ref(db, friendToken + '/friendsPendingEvent/');
-    onValue(friendsEventData, (snapshot) => {
-      dispatch(resetFriendEvents());
-      if(snapshot.exists()){
-        snapshot.forEach((child) => {
-          dispatch(getFriendsRSVPEvents({
-            path: child.val().path,
-            name: child.val().name,
-            token: child.key
-          }))
-        })
-      }
-    })
-
     // EVENTS WITH FRIENDS
 
     const eventsData = ref(db, friendToken + '/pendingEvent/');
@@ -138,20 +125,20 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
     onValue(pendingFriendRequest, (snapshot) => {
       if(snapshot.val() == 'fulfilled'){
         getPendingFriendRequestData(friendToken).then((data) => {
-          addFriend(data.friendToken, currentLoc, username, friendToken).then((key) => {
+          addFriend(colorScheme, data.friendToken, currentLoc, username, friendToken).then((key) => {
             addFriendToList(userToken, data.username, data.friendToken, key).then(() => {
               resetMyPendingFriendRequest(friendToken);
-              dispatch(getFriendsList(userToken));
+              dispatch(getFirestoreData(userToken))
               dispatch(resetPendingFriend());
             });
           })
         })
       }else if(snapshot.val() == 'needsAction'){
         getPendingFriendRequestData(friendToken).then((data) => {
-          addFriend(data.friendToken, currentLoc, username, friendToken).then((key) => {
+          addFriend(colorScheme, data.friendToken, currentLoc, username, friendToken).then((key) => {
             addFriendToList(userToken, data.username, data.friendToken, key).then(() => {
               resetMyPendingFriendRequest(friendToken);
-              dispatch(getFriendsList(userToken));
+              dispatch(getFirestoreData(userToken))
               dispatch(resetPendingFriend());
             });
           })
@@ -163,7 +150,6 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
       keyboardOn.remove();
       keyboardOff.remove();
 
-      off(friendsEventData);
       off(eventsData);
       off(friendsLocationData);
       off(pendingFriendRequest)
@@ -186,46 +172,71 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
       dispatch(setOnLoadZoomToLoc({onLoadZoomToLoc: false}))
     }
     //timer to update loc
-    if(updateList != null && updateList.length > 0){
-      const timer = setTimeout(() => {
-        dispatch(getCurrentLocation()).then(() => {
-          console.log('updating');
-          updateLoc(currentLoc, updateList);
-        });
-      }, 60000)
-  
-      return () => {
-        clearTimeout(timer);
-      }
-    }
-  }, [currentLoc, updateList, onLoadZoomToLoc])
+    const timer = setTimeout(() => {
+      dispatch(getCurrentLocation()).then(() => {
+        console.log('updating');
+        if(friendsList != null && friendsList.length > 0){
+          updateLoc(currentLoc, friendsList);
+          console.log('updatingLoc');
+        }
+      });
+    }, 60000)
 
-  const changeTempToPermanentEvent = (title, time, friendToken, friendsList, username) => {
+    return () => {
+      clearTimeout(timer);
+    }
+  }, [currentLoc, friendsList, onLoadZoomToLoc])
+
+  const changeTempToPermanentEvent = (title, time, friendToken, friendsList, username, colorScheme) => {
     if(tempPlace && title.length > 0 && time.length > 0){
       sheetRef.current.close();
       const latLng = {
         latitude: tempPlace.result.geometry.location.lat,
         longitude: tempPlace.result.geometry.location.lng
       }
-      createEvent(title, tempPlace.result.name, time, latLng, friendToken, friendsList, username)
+      createEvent(title, tempPlace.result.name, time, latLng, friendToken, friendsList, username, colorScheme)
     }else{
       alert('Invalid Event')
     }
   }
 
+  
+
+  /*
+
+  CHECK WNY MARKERS ARE DIFFERENT SIZES
+  CHECK WHY VIEW EVENT DATA INDENTED
+  */
   return(
       <TouchableWithoutFeedback onPress={() => {Keyboard.dismiss()}}>
           <View style={styles.container}>
           <StatusBar></StatusBar>
-          <MapView style={styles.map} showsUserLocation ref={map}>
+          <MapView style={styles.map} ref={map}>
+            {/* YOUR MARKER */}
+            <Marker title = {'You'} key={'You'} image={colorScheme.marker} coordinate={currentLoc}>
+              <Callout tooltip>
+                <View style = {[{backgroundColor: colorScheme.backgroundColor}, styles.markerCallout]}>
+                  <Text style={[{color: colorScheme.textColor}, styles.markerText]}>You</Text>
+                </View>
+              </Callout>
+            </Marker>
+
             {friendsLocation.map(marker => {
-              return (<Marker title={marker.name} key={marker.friendToken} coordinate={marker.latLng}></Marker>)
+              return (<Marker title={marker.name} image={marker.colorScheme.marker}  key={marker.friendToken} coordinate={marker.latLng}>
+                <Callout tooltip>
+                  <View style={[{backgroundColor: marker.colorScheme.backgroundColor}, styles.markerCallout]}>
+                    <Text style={[{color: marker.colorScheme.textColor}, styles.markerText]}>{marker.name}</Text>
+                  </View>
+                </Callout>
+              </Marker>)
             })}
+
             {eventLocations.map(marker => {
-              return (<Marker title={marker.origin.title} key={marker.origin.title} coordinate={marker.origin.latLng}>
-                <Callout>
-                  <Text>{marker.origin.title} @ {marker.origin.time} @ {marker.origin.location}</Text>
-                  <Text>Created by {marker.origin.creator.name}</Text>
+              return (<Marker title={marker.origin.title} centerOffset={{x: 0, y:-10 }} image={require('../assets/markerColors/eventMarker.png')} key={marker.origin.title} coordinate={marker.origin.latLng}>
+                <Callout tooltip>
+                  <View style={styles.eventMarker}>
+                    <Text style={styles.eventText}>{marker.origin.location}</Text>
+                  </View>
                 </Callout>
               </Marker>)
             })}
@@ -254,22 +265,12 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
                         </View>
                     ):null}
                     <Text>Friends Events</Text>
-                    {friendsEvents.map((friend) => {
-                      return(
-                        <View key={friend.origin.key}>
-                          <Text>{friend.name} is attending {friend.origin.title} at {friend.origin.time}</Text>
-                          <Text>{friend.name} is attending with {friend.origin.creator.name}</Text>
-                          <Button title = "attend" onPress={() => {rsvpToAnothersEvent(friend.origin.creator.token, friend.origin.key, username, friendToken, friend.origin.pendingResponses, friend.name, friend.token, friendsList)}}></Button>
-                          <Button title = 'dont attend'></Button>
-                        </View>  
-                      );
-                    })}
                   </View>
                 ):null}
 
                 {/* SHOW CREATE EVENT DATA */}
                 {showCreateEventData == true ? (
-                  <Formik initialValues={{title: '', time: ''}} onSubmit={(values) => {changeTempToPermanentEvent(values.title.trim(), values.time.trim(), friendToken, friendsList, username)}}>
+                  <Formik initialValues={{title: '', time: ''}} onSubmit={(values) => {changeTempToPermanentEvent(values.title.trim(), values.time.trim(), friendToken, friendsList, username, colorScheme)}}>
                   {({handleChange, handleSubmit, values}) => (
                     <View style = {styles.modalViewContainer}>
                       <Text style = {styles.createEventText}>Create Event</Text>
@@ -296,35 +297,81 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
 
                 {/* SHOW VIEW EVENTS DATA */}
                 {showViewEventData == true ? (
-                  <View>
+                  <View style={styles.modalViewContainer}>
+                    <Text style = {styles.createEventText}>View Events</Text>
                     <List.AccordionGroup>
                       {eventLocations.map((event) => {
                         return (
                           <List.Accordion right={(props) => <ModalEventRight props = {props.isExpanded}></ModalEventRight>} titleStyle={styles.eventTitleStyle} theme={{colors: {background: 'transparent', primary: 'black'} }}  key={event.origin.key} id={event.origin.key} title = {event.origin.title + ' at ' + event.origin.time}>
-                            <View styles={styles.viewEventContainer}>
-                              <Text>Created by {event.origin.creator.name}</Text>
-                              {event.origin.pendingResponses.map((response) => {
-                                if(response.token == friendToken && response.status == 'Unanswered' ){
-                                  return (
-                                  <View key = {response.token}>
-                                    <Text>You are {response.status}</Text>
-                                    <Button title = "Attend" onPress={() => {updateYourStatusInEvent(event.origin.pendingResponses, event.origin.creator.token, event.origin.key, friendToken, friendsList, username, 'Attending')}}></Button>
-                                    <Button title = "Dont Attend" onPress={() => {updateYourStatusInEvent(event.origin.pendingResponses, event.origin.creator.token, event.origin.key, friendToken, friendsList, username, 'Not Attending')}}></Button>
-                                  </View>);
-                                }else{
-                                  if(response.friendOf != null){
-                                    return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status} and is friend of {response.friendOf}</Text>)
-                                  }else{
-                                    return (<Text key = {response.token}>{response.token} +  {response.name} is {response.status}</Text>)
-                                  }
-                                }
-                              })}
-                              {event.origin.creator.token == friendToken ? (
-                                <View>
-                                  <Button title = "Delete Event" onPress={() => {deleteEvent(event.origin.deletePaths, friendToken, event.origin.key)}}></Button>
+                            {segmentedControl ? (
+                              <View style={styles.viewEventContainer}>
+                                <View style={styles.segmentedContainer}>
+                                  <TouchableOpacity><Text style={[styles.segmentedText, styles.highlightedText]}>Who</Text></TouchableOpacity>
+                                  <TouchableOpacity onPress={() => {setSegmentedControl(false)}}><Text style={styles.segmentedText}>Where</Text></TouchableOpacity>
                                 </View>
-                              ):null}
-                            </View>
+
+                                <View style={styles.pendingReponseUser}>
+                                  <Image source={event.origin.creator.colorScheme.marker} style={styles.pendingResponseIcon}></Image>
+                                  <Image source = {require('../assets/status/statusChangedAccepted.png')} style={styles.statusIcons}></Image>
+                                  {event.origin.creator.token == friendToken ? (
+                                    <Text style={styles.pendingResponseUserName}>You</Text>
+                                  ):(
+                                    <Text style={styles.pendingResponseUserName}>{event.origin.creator.name}</Text>
+                                  )}
+                                  <Text style={styles.pendingResponseUserMetadata}>Creator</Text>
+                                </View>
+
+                                {event.origin.pendingResponses.map((response) => {
+                                  if(response.status != 'Unanswered'){
+                                    return(
+                                      <View style={styles.pendingReponseUser} key={response.token}>
+                                        <Image source={response.colorScheme.marker} style={styles.pendingResponseIcon}></Image>
+                                        {response.status == 'Attending' ? (
+                                          <Image source = {require('../assets/status/statusChangedAccepted.png')} style={styles.statusIcons}></Image>
+                                        ):(
+                                          <Image source = {require('../assets/status/statusChangedMaybe.png')} style={styles.statusIcons}></Image>
+                                        )}
+                                        <Text style={styles.pendingResponseUserName}>{response.name}</Text>
+                                        {response.friendOf != null ? (
+                                          <Text style={styles.pendingResponseUserMetadata}>{response.friendOf}'s Friend</Text>
+                                        ):(
+                                          <Text style={styles.pendingResponseUserMetadata}>{event.origin.creator.name}'s Friend</Text>
+                                        )}
+                                      </View>
+                                    );
+                                  }
+                                })}
+
+                                {event.origin.pendingResponses.map((response) => {
+                                  if(response.token == friendToken && friendToken != event.origin.creator.token && response.status == 'Unanswered'){
+                                    return(
+                                      <View key={response.token} style={styles.statusChangeContainer}>
+                                        <TouchableOpacity style={styles.statusAcceptedButton} onPress={() => {updateYourStatusInEvent(event.origin.pendingResponses, event.origin.creator.token, event.origin.key, friendToken, username, 'Attending')}}>
+                                          <Image style={styles.statusAcceptedLogo} source={require('../assets/status/statusChangedAccepted.png')}></Image>
+                                          <Text style={[styles.pendingResponseUserName, styles.statusAcceptedText]}>Down to join</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.statusAcceptedButton} onPress={() => {updateYourStatusInEvent(event.origin.pendingResponses, event.origin.creator.token, event.origin.key, friendToken, username, 'Not Attending')}}>
+                                          <Image style = {styles.statusAcceptedLogo} source={require('../assets/status/statusChangedMaybe.png')}></Image>
+                                          <Text style={[styles.pendingResponseUserName, styles.statusAcceptedText]}>Maybeeee</Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    )
+                                  }
+                                })}
+                                {event.origin.creator.token == friendToken ? (
+                                  <View>
+                                    <Button title = "Delete Event" onPress={() => {deleteEvent(friendToken, event.origin.key)}}></Button>
+                                  </View>
+                                ):null}
+                              </View>
+                            ):(
+                              <View style={styles.viewEventContainer}>
+                                 <View style={styles.segmentedContainer}>
+                                  <TouchableOpacity onPress={() => {setSegmentedControl(true)}}><Text style={styles.segmentedText}>Who</Text></TouchableOpacity>
+                                  <TouchableOpacity><Text style={[styles.segmentedText, styles.highlightedText]}>Where</Text></TouchableOpacity>
+                                </View>
+                              </View>
+                            )}
                           </List.Accordion>
                         );
                       })}
@@ -523,9 +570,98 @@ const styles = StyleSheet.create({
   eventTitleStyle: {
     fontFamily: 'TextBold',
     fontSize: 18,
-    marginLeft: 34
   },
   viewEventContainer: {
-    marginLeft: 50
+    marginLeft: 16
+  },
+  markerCallout: {
+    borderRadius: 5,
+    boxShadow: "rgba(69, 81, 88, 0.1)"
+  },
+  markerText: {
+    fontFamily: 'TextBold',
+    fontSize: 17, 
+    paddingTop: 7,
+    paddingBottom: 7,
+    paddingLeft: 10,
+    paddingRight: 11
+  },
+  eventMarker:{
+    borderRadius: 5,
+    boxShadow: "rgba(69, 81, 88, 0.1)",
+    backgroundColor: '#F8D7D5',
+    flexDirection: 'row'
+  },
+  eventText: {
+    fontFamily: 'TextBold',
+    fontSize: 17, 
+    paddingTop: 7,
+    paddingBottom: 7,
+    paddingLeft: 10,
+    paddingRight: 11,
+    color: '#CD534C'
+  },
+  pendingReponseUser: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    alignItems: 'center'
+  },
+  pendingResponseIcon: {
+    width: 23,
+    height: 23
+  },
+  statusIcons: {
+    position:'relative',
+    right: 13,
+    top: 4
+  },
+  pendingResponseUserName: {
+    fontFamily: 'TextBold',
+    color: '#434343',
+    position: 'relative',
+    right: 5,
+    fontSize: 15
+  },
+  pendingResponseUserMetadata: {
+    fontFamily: 'TextLight',
+    color: '#AFAFAF',
+    marginLeft: 3
+  },
+  statusChangeContainer: {
+    marginTop: 30,
+    flexDirection: 'row',
+    width:'100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+
+  },
+  statusAcceptedButton: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  statusAcceptedLogo: {
+    marginLeft: 10,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  statusAcceptedText: {
+    marginLeft: 10,
+    marginRight: 15
+  },
+  segmentedContainer: {
+    flexDirection: 'row',
+    marginTop: 10
+  },
+  segmentedText: {
+    color: '#6D7377',
+    fontFamily: 'TextBold',
+    marginRight: 30,
+    marginBottom: 25,
+  },
+  highlightedText: {
+    textDecorationLine: 'underline'
   }
 });

@@ -14,11 +14,44 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
   const [checkBoxOne, setCheckBoxOne] = useState(false);
   const [checkBoxTwo, setCheckBoxTwo] = useState(false);
 
+  const selectColorScheme = () => {
+    const colorNum = Math.floor(Math.random() * (4) + 1);
+
+    let colorScheme = {};
+    if(colorNum == 1){
+      colorScheme["color"] = "purple";
+      colorScheme["marker"] = require('../assets/markerColors/purpleMarker.png');
+      colorScheme["backgroundColor"] = '#EDDBF6';
+      colorScheme["textColor"] = '#C76CFF';
+    }else if(colorNum == 2){
+      colorScheme["color"] = "blue";
+      colorScheme["marker"] = require('../assets/markerColors/blueMarker.png');
+      colorScheme["backgroundColor"] = '#E3E8F9';
+      colorScheme["textColor"] = '#758DE3';
+    }else if(colorNum == 3){
+      colorScheme["color"] = "green";
+      colorScheme["marker"] = require('../assets/markerColors/greenMarker.png');
+      colorScheme["backgroundColor"] = '#D2EBE6';
+      colorScheme["textColor"] = '#41BEAC';
+    }else{
+      colorScheme["color"] = "lightBlue";
+      colorScheme["marker"] = require('../assets/markerColors/lightBlueMarker.png');
+      colorScheme["backgroundColor"] = '#DCEEF1';
+      colorScheme["textColor"] = '#47B7F1';
+    }
+
+    return colorScheme;
+  }
+
   const storeUsername =  (name) => {
     if(name.length > 0){
-      newUserDoc(userToken, name).then(() => {
+      const colorScheme = selectColorScheme();
+
+      newUserDoc(userToken, name, colorScheme).then(() => {
         dispatch(setUsername({
-          username: name
+          username: name,
+          colorScheme: colorScheme,
+          isLoaded: true
         }))
         dispatch(setNewUserFalse());
         dispatch(getCurrentLocation());

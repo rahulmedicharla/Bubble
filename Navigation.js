@@ -13,12 +13,11 @@ import { LoadingPage } from './views/Loading';
 //redux imports
 import { selectFontIsLoaded, selectIsDeepLinkForeground, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded, setIsDeepLinkForeground, setSignOut } from './redux/authSlice';
 import { useSelector, useDispatch } from 'react-redux/';
-import { selectFriendsList, selectUpdateList, selectUsername } from './redux/firestoreSlice';
-import { checkIfNewUser, newUserRLDB, selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsEvents, selectFriendsLocation, selectFriendToken,  
+import { checkIfNewUser, getFirestoreData, selectColorScheme, selectFriendsList, selectIsLoaded, selectUsername } from './redux/firestoreSlice';
+import { newUserRLDB, selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsEvents, selectFriendsLocation, selectFriendToken,  
     selectOnLoadZoomToLoc,  
     selectPendingFriendToken, selectPendingFriendUsername, setPendingFriend} from './redux/RTDatabseSlice';
 import { setSignIn } from "./redux/authSlice";
-import { getUsername, getFriendsList } from "./redux/firestoreSlice";
 import { getCurrentLocation, setFriendToken } from "./redux/RTDatabseSlice";
 //firebase imports
 import { getAuth } from 'firebase/auth';
@@ -49,7 +48,8 @@ export default function AppRoute(){
     //firestore slice variables
     const username = useSelector(selectUsername);
     const friendsList = useSelector(selectFriendsList);
-    const updateList = useSelector(selectUpdateList);
+    const colorScheme = useSelector(selectColorScheme);
+    const isLoaded = useSelector(selectIsLoaded);
 
     //RTDB slice variables
     const friendsLocation = useSelector(selectFriendsLocation);
@@ -71,7 +71,15 @@ export default function AppRoute(){
         require('./assets/selectionIcons/selectModal.png'),
         require('./assets/emojis/viewEvents.png'),
         require('./assets/emojis/createEvent.png'),
-        require('./assets/emojis/addFriends.png')
+        require('./assets/emojis/addFriends.png'),
+        require('./assets/markerColors/purpleMarker.png'),
+        require('./assets/markerColors/greenMarker.png'),
+        require('./assets/markerColors/lightBlueMarker.png'),
+        require('./assets/markerColors/blueMarker.png'),
+        require('./assets/status/statusChangedAccepted.png'),
+        require('./assets/status/statusChangedMaybe.png'),
+        require('./assets/markerColors/eventMarker.png'),
+        require('./assets/votingProgress.png')
     ]
 
     const loadFonts = async() => {
@@ -83,7 +91,7 @@ export default function AppRoute(){
 
     }
 
-    const loadImages = () => {
+    const loadImages = async () => {
         imagesToLoad.map((image) => {
             Asset.fromModule(image).downloadAsync();
         })
@@ -118,7 +126,6 @@ export default function AppRoute(){
         }
 
         loadFonts().then(() => {
-            loadImages();
             dispatch(setFontIsLoaded({fontIsLoaded: true}));
         })
 
@@ -126,8 +133,7 @@ export default function AppRoute(){
             if(user){
                 checkIfNewUser(user.uid).then((userExists) => {
                     if(userExists){
-                        dispatch(getUsername(user.uid));
-                        dispatch(getFriendsList(user.uid));
+                        dispatch(getFirestoreData(user.uid))
                         dispatch(getCurrentLocation());
                     }else{
                         newUserRLDB(user.uid);
@@ -182,7 +188,7 @@ export default function AppRoute(){
                         </Stack.Screen>
                     ):(
                         <Stack.Group>
-                            {currentLocIsLoaded ? (
+                            {(currentLocIsLoaded && isLoaded) ? (
                                 <Stack.Group>
                                     <Stack.Screen name="NearYou" options={({navigation}) => ({ 
                                         //screen header options
@@ -197,10 +203,10 @@ export default function AppRoute(){
                                             friendToken = {friendToken}
                                             username = {username}
                                             friendsList = {friendsList}
-                                            updateList = {updateList}
                                             pendingFriendToken = {pendingFriendToken}
                                             pendingFriendUsername = {pendingFriendUsername}
                                             onLoadZoomToLoc = {onLoadZoomToLoc}
+                                            colorScheme = {colorScheme}
                                             currentLoc = {currentLoc} ></NearYouPage>}>
                                     </Stack.Screen>
 

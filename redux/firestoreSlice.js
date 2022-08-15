@@ -8,14 +8,11 @@ import { doc, getDoc, getFirestore, updateDoc, setDoc } from "firebase/firestore
 
 */
 
-export const getFriendsList = createAsyncThunk('firestore/getFriendsList', async (userId) => {
-
+export const getFirestoreData = createAsyncThunk('firestore/getFirestoreData', async(userId) => {
     const firestore = getFirestore();
     const docSnap = await getDoc(doc(firestore, 'users', userId));
 
     let list = [];
-    let updateList = [];
-
 
     if(docSnap.data().friendsList != null){
 
@@ -23,41 +20,28 @@ export const getFriendsList = createAsyncThunk('firestore/getFriendsList', async
             list.push(friend);
         })
 
-        docSnap.data().updateKeyList.forEach((keys) => {
-            updateList.push(keys);
-        })
     }
 
     const data = {
-        friendsList: list,
-        updateList: updateList
-    };
-
-    return data;
-})
-
-export const getUsername = createAsyncThunk('firestore/getUsername', async (userId) => {
-    const firestore = getFirestore();
-    const docRef = doc(firestore, "users", userId);
-    const docSnap = await getDoc(docRef);
-
-    const data = {
+        colorScheme: docSnap.data().colorScheme,
         username: docSnap.data().username,
         isLoaded: true,
+        friendsList: list,
     }
+
     return data;
 })
-
 /*
 
     CREATING DOC FOR NEW USERS
 
 */
 
-export const newUserDoc = async(userId, name) => {
+export const newUserDoc = async(userId, name, colorScheme) => {
     const firestore = getFirestore();
     await setDoc(doc(firestore, "users", userId), {
         username: name,
+        colorScheme: colorScheme
     })
 }
 
@@ -72,35 +56,34 @@ export const addFriendToList = async(userId, name, friendToken, key) => {
     const docSnap = await getDoc(doc(firestore, 'users', userId));
 
     const list = docSnap.data().friendsList;
-    const updateList = docSnap.data().updateKeyList;
 
     if(!list){
         await updateDoc(doc(firestore, 'users', userId), {
             friendsList: [{
                 token: friendToken,
-                name: name
-            }],
-            updateKeyList: [{
-                token: friendToken,
+                name: name,
                 key: key
-            }]
+            }],
         }).then(() => {            
         })
     }else{
         list.push({
             token: friendToken,
-            name: name
-        });
-        updateList.push({
-            token: friendToken,
+            name: name,
             key: key
         });
         await updateDoc(doc(firestore, 'users', userId), {
             friendsList: list,
-            updateKeyList: updateList
         }).then(() => {
         })
     }
+}
+
+export const checkIfNewUser = async (userId) => {
+    const firestore = getFirestore();
+    const docSnap = await getDoc(doc(firestore, 'users', userId));
+
+    return docSnap.exists();
 }
 
 export const saveUsername = async(userId, newName) => {
@@ -117,7 +100,7 @@ const initialState = {
     isLoaded: false,
     username: null,
     friendsList: [],
-    updateList: []
+    colorScheme: {}
 }
 
 const firestoreSlice = createSlice({
@@ -127,14 +110,15 @@ const firestoreSlice = createSlice({
         setUsername: (state,action) => {
             state.isLoaded = action.payload.isLoaded;
             state.username = action.payload.username;
-        }
+            state.colorScheme = action.payload.colorScheme;
+        },
     },
     extraReducers: (builder) =>  {
-        builder.addCase(getUsername.fulfilled, (state,action) => {
-            return Object.assign({}, state, {username: action.payload.username, isLoaded: action.payload.isLoaded})
-        })
-        builder.addCase(getFriendsList.fulfilled, (state, action) => {
-            return Object.assign({}, state, {friendsList: action.payload.friendsList, updateList: action.payload.updateList})
+        builder.addCase(getFirestoreData.fulfilled, (state, action) => {
+            state.friendsList = action.payload.friendsList;
+            state.isLoaded = true;
+            state.username = action.payload.username;
+            state.colorScheme = action.payload.colorScheme;
         })
     }
     
@@ -145,6 +129,6 @@ export const { setUsername } = firestoreSlice.actions;
 export const selectUsername = (state) => state.firestore.username;
 export const selectIsLoaded = (state) => state.firestore.isLoaded;
 export const selectFriendsList = (state) => state.firestore.friendsList;
-export const selectUpdateList = (state) => state.firestore.updateList;
+export const selectColorScheme = (state) => state.firestore.colorScheme;
 
 export default firestoreSlice.reducer;

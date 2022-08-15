@@ -4,75 +4,42 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { getCurrentPositionAsync, requestForegroundPermissionsAsync } from "expo-location";
 import { child, get, getDatabase, push, ref, remove, set, update } from 'firebase/database';
 
+
+/*
+
+    VOTING ON LOCATION IN EVENT AND ADDING RECOMMENDATIon
+
+*/
+
 /*
 
     VIEWING EVENTS OF FRIENDS
 
 */
 
-export const rsvpToAnothersEvent = (creator, key, username, friendToken, pendingResponses, friendOf, friendOfToken, friendsList) => {
+const updateMyFriendsOfAnothersEvent = async (pendingReponses, name, creator, key, myToken) => {
     const db = getDatabase();
 
-    get(child(ref(db), 'events/' + creator + '/' + key + '/pendingResponses/')).then((snapshot) => {
-        update(ref(db, 'events/' + creator + '/' + key + '/pendingResponses/'), {
-            [Object.keys(snapshot).length -1]: {
-                name: username,
-                token: friendToken,
-                status: 'Attending',
-                friendOf: friendOf
-            }
-        }).then(() => {
-            updateFriendOfEvent(friendToken, creator, key).then(() => {
-                
-                remove(ref(db, friendToken + '/friendsPendingEvent/' + friendOfToken));
-
-                updateMyFriendsOfAnothersEvent(pendingResponses, friendsList, username,creator, key, friendToken);
-
-                updateStatusToRerender(pendingResponses, key);
-            })
-        })
-    }); 
-}
-
-const updateMyFriendsOfAnothersEvent = (pendingReponses, friendsList, name, creator, key, myToken) => {
-    const db = getDatabase();
-
-    const tokenArray = friendsList.map((friend) => {return friend.token})
+    const snapshot = await get(child(ref(db), myToken + '/friends/'));
     
     let pendingResponsesArray = [];
     for(let [key, val] of Object.entries(pendingReponses)){
         pendingResponsesArray.push(val.token);
     }
 
-
-    tokenArray.map((friend) => {
-        if(!pendingResponsesArray.includes(friend)){
-            get(child(ref(db), friend + '/friendsPendingEvent/')).then((snapshot) => {
-                if(snapshot.exists()){
-                    update(ref(db, 'events/' + creator + '/' + key + '/deletePaths'), {
-                        [friend]: key
-                    }).then(() => {
-                        update(ref(db, friend + '/friendsPendingEvent/'), {
-                            [myToken]: {
-                                name: name,
-                                path: creator + '/' + key
-                            }
-                        })
-                    })
-                }else{
-                    update(ref(db, 'events/' + creator + '/' + key + '/deletePaths'), {
-                        [friend]: key
-                    }).then(() => {
-                        console.log('also running');
-                        set(ref(db, friend + '/friendsPendingEvent/'), {
-                            [myToken]: {
-                                name: name,
-                                path: creator + '/' + key
-                            }
-                        })
-                    })
-                }
-            });
+    snapshot.forEach((child) => {
+        if(!pendingResponsesArray.includes(child.val().friendToken)){
+            updateFriendOfEvent(child.val().friendToken, creator, key).then(() => {
+                update(ref(db, 'events/' + creator + '/' + key + '/pendingResponses/'), {
+                    [Object.keys(snapshot).length -1]: {
+                        name: child.val().name,
+                        token: child.val().friendToken,
+                        status: 'Unanswered',
+                        friendOf: name,
+                        colorScheme: child.val().colorScheme
+                    }
+                })
+            })
         }
     })
 }
@@ -85,9 +52,9 @@ const updateMyFriendsOfAnothersEvent = (pendingReponses, friendsList, name, crea
 
 */
 
-export const updateLoc = (currentLoc, updateList) => {
+export const updateLoc = (currentLoc, friendsList) => {
     const db = getDatabase();
-    updateList.map((friend) => {
+    friendsList.map((friend) => {
         update(ref(db, friend.token + '/friends/' + friend.key), {
             latLng: currentLoc
         })
@@ -102,20 +69,24 @@ export const updateLoc = (currentLoc, updateList) => {
 */
 
 
-const createGlobalEventRef = async (title, location, time, latLng, friendToken, friendsList, username) =>{
+const createGlobalEventRef = async (title, location, time, latLng, friendToken, username, colorScheme) =>{
     const db = getDatabase();
+
+    const snapshot = await get(child(ref(db), friendToken + '/friends/'));
 
     let list = [];
     list.push({
         name: username,
         token: friendToken,
-        status: 'Attending'
+        status: 'Unanswered',
+        colorScheme: colorScheme
     })
-    friendsList.map((friend) => {
+    snapshot.forEach((child) => {
         list.push({
-            name: friend.name,
-            token: friend.token,
-            status: 'Unanswered'
+            name: child.val().name,
+            token: child.val().friendToken,
+            status: 'Unanswered',
+            colorScheme: child.val().colorScheme
         })
     })
 
@@ -126,22 +97,28 @@ const createGlobalEventRef = async (title, location, time, latLng, friendToken, 
     const upload = {
         title: title,
         location: location,
+        latLng: latLng,
         creator: {
             name: username,
-            token: friendToken
+            token: friendToken,
+            colorScheme: colorScheme
         },
         time: time, 
-        latLng: latLng,
         key: newPostRef.key,
         pendingResponses: list,
         deletePaths: {
             [friendToken]: newPostRef.key
-        }
+        },
+        totalVotes: 1,
+        voteList: [friendToken]
     }    
 
     await set(newPostRef, upload);
 
-    return newPostRef.key;
+    return {
+        key: newPostRef.key,
+        pendingResponses: list
+    };
 }
 
 const updateFriendOfEvent = async(otherFriendToken, friendToken, key) => {
@@ -172,42 +149,45 @@ const updateFriendOfEvent = async(otherFriendToken, friendToken, key) => {
     });
 }
 
-export const createEvent = (title, location, time, latLng, friendToken, friendsList, username) => {
-    createGlobalEventRef(title, location, time, latLng, friendToken, friendsList, username).then((key) => {
-        updateFriendOfEvent(friendToken, friendToken, key);
+export const createEvent = (title, location, time, latLng, friendToken, friendsList, username, colorScheme) => {
+    createGlobalEventRef(title, location, time, latLng, friendToken, username, colorScheme).then((data) => {
         friendsList.map((friend) => {
-            updateFriendOfEvent(friend.token, friendToken, key);
+            updateFriendOfEvent(friend.token, friendToken, data.key);
         })
+        updateFriendOfEvent(friendToken, friendToken, data.key).then(() => {
+        });
     })
 }
 
-export const deleteEvent = (deletePaths, friendToken, key) => {
+export const deleteEvent = (friendToken, key) => {
     const db = getDatabase();
 
-    remove(ref(db, 'events/' + friendToken + '/' + key));
+    get(child(ref(db), 'events/' + friendToken + '/' + key + '/deletePaths')).then((snapshot) => {
+        snapshot.forEach((child) => {
+            remove(ref(db, child.key + '/pendingEvent/' + child.val()));
+        })
+        remove(ref(db, 'events/' + friendToken + '/' + key));
+    })
 
-    for(let [key, val] of Object.entries(deletePaths)) {
-        remove(ref(db, key + '/pendingEvent/' + val));
-        remove(ref(db, key + '/friendsPendingEvent/' + val));
-    }
+
 
 }
 
-export const updateYourStatusInEvent = (pendingResponses, creator, key, friendToken, friendsList, username, newStatus) => {
+export const updateYourStatusInEvent = (pendingResponses, creator, key, friendToken, username, newStatus) => {
     const db = getDatabase();
 
 
     get(child(ref(db), 'events/' + creator + '/' + key + '/pendingResponses/')).then((snapshot) => {
         let counter = 0;
         if(newStatus == 'Attending'){
-            updateMyFriendsOfAnothersEvent(pendingResponses, friendsList, username, creator, key, friendToken);
+            updateMyFriendsOfAnothersEvent(pendingResponses, username, creator, key, friendToken);
         }
         snapshot.forEach((response) => {
             if(response.val().token == friendToken){
                 update(ref(db, 'events/' + creator + '/' + key + '/pendingResponses/' + counter + '/'), {
                     status: newStatus
                 }).then(() => {
-                    updateStatusToRerender(pendingResponses, key, friendToken);
+                    updateStatusToRerender(pendingResponses, key);
                 })
             }
             counter++;
@@ -255,7 +235,7 @@ export const acceptFriendRequest = (myFriendToken, otherFriendToken, username, o
 }
 
 
-export const addFriend = async (otherFriendToken, loc, username, myFriendToken) => {
+export const addFriend = async (colorScheme, otherFriendToken, loc, username, myFriendToken) => {
     const db = getDatabase();
 
     const newRef = ref(db, otherFriendToken + '/friends/');
@@ -263,7 +243,8 @@ export const addFriend = async (otherFriendToken, loc, username, myFriendToken) 
     const upload = {
         latLng: loc,
         name: username,
-        friendToken: myFriendToken
+        friendToken: myFriendToken,
+        colorScheme: colorScheme
     }    
 
     const newPostRef = push(newRef);
@@ -338,8 +319,8 @@ export const getCurrentLocation = createAsyncThunk('realtimeDatabase/getCurrentL
     
     const data = {
         loc:{
-            latitude: location.coords.latitude.toFixed(7),
-            longitude: location.coords.longitude.toFixed(7),
+            latitude: parseFloat(location.coords.latitude),
+            longitude: parseFloat(location.coords.longitude),
         }
     }
 
@@ -366,6 +347,9 @@ export const getFriendsLocation = createAsyncThunk('realtimeDatabase/getFriendsL
                         break;
                     case 'friendToken':
                         user['friendToken'] = grandChild.val();
+                        break;
+                    case 'colorScheme':
+                        user['colorScheme'] = grandChild.val();
                         break;
                     default: 
                         //going through users latLng Object
@@ -394,23 +378,17 @@ export const getFriendsLocation = createAsyncThunk('realtimeDatabase/getFriendsL
 
 export const newUserRLDB = (userId) => {
     const db = getDatabase();
-    set(ref(db, userId.substring(0,6)), {
-        friendToken: userId.substring(0,6),
-        pendingFriendRequest: {
-            status: 'null'
+    get(child(ref(db), userId.substring(0,6))).then((snapshot) => {
+        if(!snapshot.exists()){
+            set(ref(db, userId.substring(0,6)), {
+                friendToken: userId.substring(0,6),
+                pendingFriendRequest: {
+                    status: 'null'
+                }
+            })
         }
-    })
+    });
 }
-
-export const checkIfNewUser = async(userId) => {
-    const db = getDatabase();
-    const dbRef = ref(db);
-
-    const snapshot = await get(child(dbRef, userId.substring(0,6)));
-
-    return snapshot.exists();
-}
-
 /**
  * REDUX SLICE
  */
