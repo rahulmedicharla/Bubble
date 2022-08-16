@@ -11,6 +11,80 @@ import { child, get, getDatabase, push, ref, remove, set, update } from 'firebas
 
 */
 
+export const updateVote = async (creator, key, title, friendToken, pendingResponses) => {
+    const db = getDatabase();
+
+    const snapshot = await get(child(ref(db), 'events/' + creator + '/' + key + '/location'));
+
+    let counter = 0;
+    snapshot.forEach((loc) => {
+        if(loc.val().title == title){
+            get(child(ref(db), 'events/' + creator + '/' + key + '/location/' + counter)).then((data) => {
+                let numVotes = data.val().vote + 1;
+                counter--;
+                update(ref(db, 'events/' + creator + '/' + key + '/location/' + counter), {
+                    vote: numVotes
+                })
+            }).then(() => {
+                get(child(ref(db), 'events/' + creator + '/' + key + '/totalVotes')).then((snapshot) => {
+                    let votes = parseInt(snapshot.val());
+                    votes++;
+                    update(ref(db, 'events/' + creator + '/' + key), {
+                        totalVotes: votes
+                    })
+                }).then(() => {
+                    get(child(ref(db), 'events/' + creator + '/' + key + '/voteList')).then((snapshot) => {
+                        let list = snapshot.val();
+                        list.push(friendToken);
+                        update(ref(db, 'events/' + creator + '/' + key), {
+                            voteList: list
+                        }).then(() => {
+                            updateStatusToRerender(pendingResponses, key);
+                        })
+                    })
+                })
+            })
+        }
+        counter++;
+    })
+}
+
+export const reccomendNewLocation = async(creator, key, friendToken, pendingResponses, location, latLng) => {
+    const db = getDatabase();
+
+    const snapshot = await get(child(ref(db), 'events/' + creator + '/' + key + '/location'));
+
+    const locationList = snapshot.val();
+    locationList.push({
+        title: location,
+        latLng: latLng,
+        vote: 1
+    })
+
+
+    update(ref(db, 'events/' + creator + '/' + key), {
+        location: locationList  
+    }).then(() => {
+        get(child(ref(db), 'events/' + creator + '/' + key + '/totalVotes')).then((snapshot) => {
+            let votes = parseInt(snapshot.val());
+            votes++;
+            update(ref(db, 'events/' + creator + '/' + key), {
+                totalVotes: votes
+            })
+        }).then(() => {
+            get(child(ref(db), 'events/' + creator + '/' + key + '/voteList')).then((snapshot) => {
+                let list = snapshot.val();
+                list.push(friendToken);
+                update(ref(db, 'events/' + creator + '/' + key), {
+                    voteList: list
+                }).then(() => {
+                    updateStatusToRerender(pendingResponses, key);
+                })
+            })
+        })
+    })
+}
+
 /*
 
     VIEWING EVENTS OF FRIENDS
@@ -103,8 +177,7 @@ const createGlobalEventRef = async (title, location, time, latLng, friendToken, 
     
     const upload = {
         title: title,
-        location: location,
-        latLng: latLng,
+        location: locList,
         creator: {
             name: username,
             token: friendToken,
@@ -153,7 +226,7 @@ const updateFriendOfEvent = async(otherFriendToken, friendToken, key) => {
     });
 }
 
-export const createEvent = (title, location, time, latLng, friendToken, friendsList, username, colorScheme) => {
+export const createEvent = async (title, location, time, latLng, friendToken, friendsList, username, colorScheme) => {
     createGlobalEventRef(title, location, time, latLng, friendToken, username, colorScheme).then((key) => {
         friendsList.map((friend) => {
             updateFriendOfEvent(friend.token, friendToken, key);

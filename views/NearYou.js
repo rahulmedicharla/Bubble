@@ -1,14 +1,14 @@
 //react imports
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity, Share, Keyboard, Image, ImageBackground, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity, Share, Keyboard, Image, ImageBackground, TouchableWithoutFeedback } from 'react-native';
 import MapView, { Callout, Marker } from 'react-native-maps';
 import { Formik } from "formik";
 import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
 
 //redux imports
 import { acceptFriendRequest, addFriend, createEvent, deleteEvent, getCurrentLocation, getEvents, getFriendsLocation, getFriendsRSVPEvents, 
-  getPendingFriendRequestData, resetEventLocations, resetFriendEvents, resetMyPendingFriendRequest, resetPendingFriend, rsvpToAnothersEvent, setOnLoadZoomToLoc, updateLoc, updateYourStatusInEvent } from '../redux/RTDatabseSlice';
+  getPendingFriendRequestData, reccomendNewLocation, resetEventLocations, resetFriendEvents, resetMyPendingFriendRequest, resetPendingFriend, rsvpToAnothersEvent, setOnLoadZoomToLoc, updateLoc, updateVote, updateYourStatusInEvent } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
 import { getDatabase, off, onValue, ref, update } from 'firebase/database';
 import { addFriendToList, getFirestoreData } from '../redux/firestoreSlice';
@@ -194,9 +194,26 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
         latitude: tempPlace.result.geometry.location.lat,
         longitude: tempPlace.result.geometry.location.lng
       }
-      createEvent(title, tempPlace.result.name, time, latLng, friendToken, friendsList, username, colorScheme)
+      createEvent(title, tempPlace.result.name, time, latLng, friendToken, friendsList, username, colorScheme).then(() => {
+        setTempPlace(null);
+      });
     }else{
       alert('Invalid Event')
+    }
+  }
+
+  const addNewLoc = (creator, key, token, pendingResponses) => {
+    if(tempPlace){
+      const latLng = {
+        latitude: tempPlace.result.geometry.location.lat,
+        longitude: tempPlace.result.geometry.location.lng
+      }
+      const location = tempPlace.result.name;
+      reccomendNewLocation(creator, key, token, pendingResponses, location, latLng).then(() => {
+        setTempPlace(null);
+      })
+    }else{
+      alert('Invalid Place')
     }
   }
 
@@ -232,13 +249,15 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
             })}
 
             {eventLocations.map(marker => {
-              return (<Marker title={marker.origin.title} centerOffset={{x: 0, y:-10 }} image={require('../assets/markerColors/eventMarker.png')} key={marker.origin.title} coordinate={marker.origin.latLng}>
+              return marker.origin.location.map((loc) => {
+                return (<Marker title={loc.title} centerOffset={{x: 0, y:-10 }} image={require('../assets/markerColors/eventMarker.png')} key={loc.title} coordinate={loc.latLng}>
                 <Callout tooltip>
                   <View style={styles.eventMarker}>
-                    <Text style={styles.eventText}>{marker.origin.location}</Text>
+                    <Text style={styles.eventText}>{loc.title}</Text>
                   </View>
                 </Callout>
               </Marker>)
+              })
             })}
           </MapView>
           <BottomSheet handleStyle={{backgroundColor: '#E8E4F4'}}  ref={sheetRef} snapPoints={snapPoints} enablePanDownToClose index={-1} onClose={() => {
@@ -366,10 +385,67 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
                               </View>
                             ):(
                               <View style={styles.viewEventContainer}>
-                                 <View style={styles.segmentedContainer}>
+                                <View style={styles.segmentedContainer}>
                                   <TouchableOpacity onPress={() => {setSegmentedControl(true)}}><Text style={styles.segmentedText}>Who</Text></TouchableOpacity>
                                   <TouchableOpacity><Text style={[styles.segmentedText, styles.highlightedText]}>Where</Text></TouchableOpacity>
                                 </View>
+                                {event.origin.pendingResponses.map((response) => {
+                                  if(response.token == friendToken){
+                                    if(response.status == 'Attending'){
+                                      if(!event.origin.voteList.includes(friendToken)){
+                                        return (
+                                          <View key = {response.token}>
+                                            <PlacesInput stylesInput={styles.addRecInput} requiredCharactersBeforeSearch={5} stylesContainer={styles.addRecContainer} googleApiKey={mapsApiKey} onSelect={(place) => {setTempPlace(place)}} placeHolder={"Enter a recommendation..."} searchRadius={500} searchLatitude={parseFloat(currentLoc.latitude)} searchLongitude={parseFloat(currentLoc.longitude)} queryTypes="establishment" ></PlacesInput>
+                                            <TouchableOpacity style={styles.addRecButton} onPress={() => {addNewLoc(event.origin.creator.token, event.origin.key, friendToken, event.origin.pendingResponses)}}>
+                                              <Text style={styles.addRecText}>Recommend</Text>
+                                            </TouchableOpacity>
+                                            {event.origin.location.map((loc) => {
+                                              return (
+                                                <View style={styles.eventLocationContainer} key = {loc.title}>
+                                                  <View style={styles.horizontalOrg}>
+                                                    <TouchableOpacity onPress={() => {updateVote(event.origin.creator.token, event.origin.key, loc.title, friendToken, event.origin.pendingResponses)}}>
+                                                      <MaterialCommunityIcons name="selection-ellipse-arrow-inside" size={20} color="black"></MaterialCommunityIcons>
+                                                    </TouchableOpacity>
+                                                    <Text style={styles.eventLocationText}>{loc.title}</Text>
+                                                  </View>
+                                                  <View style = {styles.horizontalOrg}>
+                                                    <Image style={{width: (((loc.vote/event.origin.totalVotes).toFixed(2) * 100) -20)+ '%'}} source={require('../assets/votingProgress.png')}></Image>
+                                                    <Text style = {styles.eventLocationCount}>{loc.vote} vote(s)</Text>
+                                                  </View>
+                                                </View>
+                                              );
+                                            })}
+                                          </View>
+                                        );
+                                      }else{
+                                        return event.origin.location.map((loc) => {
+                                          return (
+                                            <View style={styles.eventLocationContainer} key = {loc.title}>
+                                              <Text style={styles.eventLocationText}>{loc.title}</Text>
+                                              <View style = {styles.horizontalOrg}>
+                                                <Image style={{width: (((loc.vote/event.origin.totalVotes).toFixed(2) * 100) -20) + '%'}} source={require('../assets/votingProgress.png')}></Image>
+                                                <Text style = {styles.eventLocationCount}>{loc.vote} vote(s)</Text>
+                                              </View>
+                                            </View>
+                                          );
+                                        })
+                                      }
+                                    }else{
+                                      return event.origin.location.map((loc) => {
+                                        return (
+                                          <View style={styles.eventLocationContainer} key = {loc.title}>
+                                            <Text style={styles.eventLocationText}>{loc.title}</Text>
+                                            <View style = {styles.horizontalOrg}>
+                                              <Image style={{width: (((loc.vote/event.origin.totalVotes).toFixed(2) * 100) -20) + '%'}} source={require('../assets/votingProgress.png')}></Image>
+                                              <Text style = {styles.eventLocationCount}>{loc.vote} vote(s)</Text>
+                                            </View>
+                                          </View>
+                                        );
+                                      })
+
+                                    }
+                                  }
+                                })}
                               </View>
                             )}
                           </List.Accordion>
@@ -604,7 +680,7 @@ const styles = StyleSheet.create({
   pendingReponseUser: {
     flexDirection: 'row',
     marginBottom: 10,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   pendingResponseIcon: {
     width: 23,
@@ -633,7 +709,6 @@ const styles = StyleSheet.create({
     width:'100%',
     alignItems: 'center',
     justifyContent: 'center',
-
   },
   statusAcceptedButton: {
     flexDirection: 'row',
@@ -653,15 +728,57 @@ const styles = StyleSheet.create({
   },
   segmentedContainer: {
     flexDirection: 'row',
-    marginTop: 10
+    marginTop: 10,
+    marginBottom: 10
   },
   segmentedText: {
     color: '#6D7377',
     fontFamily: 'TextBold',
     marginRight: 30,
-    marginBottom: 25,
   },
   highlightedText: {
     textDecorationLine: 'underline'
+  },
+  eventLocationContainer:{
+    marginTop: 4,
+    marginBottom: 10
+  },
+  eventLocationText: {
+    fontFamily: 'TextBold',
+    color: '#434343',
+    fontSize: 15,
+    marginLeft: 6
+  },
+  eventLocationCount:{
+    fontFamily: 'TextLight',
+    marginLeft: 10,
+    fontSize: 12
+  },
+  horizontalOrg: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  addRecContainer: {
+    position: 'relative',
+    width: '89%',
+    backgroundColor: 'transparent',
+    borderRadius: 10,
+    marginBottom: 20
+  },
+  addRecInput: {
+    fontSize: 14,
+    borderRadius: 7,
+    backgroundColor: "#FFFFFF85",
+    fontFamily: "TextBold",
+    color: '#AFB9BF',
+    right: 8
+  },
+  addRecButton: {
+    width: '89%',
+    marginBottom: 20,
+    alignItems: 'flex-end'
+  },
+  addRecText:{
+    fontFamily: 'TextBold'
   }
 });
