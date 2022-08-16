@@ -90,6 +90,13 @@ const createGlobalEventRef = async (title, location, time, latLng, friendToken, 
         })
     })
 
+    let locList = []
+    locList.push({
+        title: location,
+        latLng: latLng,
+        vote: 1
+    })
+
     const newRef = ref(db, 'events/' + friendToken);
     const newPostRef = push(newRef);
     
@@ -115,10 +122,7 @@ const createGlobalEventRef = async (title, location, time, latLng, friendToken, 
 
     await set(newPostRef, upload);
 
-    return {
-        key: newPostRef.key,
-        pendingResponses: list
-    };
+    return newPostRef.key;
 }
 
 const updateFriendOfEvent = async(otherFriendToken, friendToken, key) => {
@@ -150,12 +154,11 @@ const updateFriendOfEvent = async(otherFriendToken, friendToken, key) => {
 }
 
 export const createEvent = (title, location, time, latLng, friendToken, friendsList, username, colorScheme) => {
-    createGlobalEventRef(title, location, time, latLng, friendToken, username, colorScheme).then((data) => {
+    createGlobalEventRef(title, location, time, latLng, friendToken, username, colorScheme).then((key) => {
         friendsList.map((friend) => {
-            updateFriendOfEvent(friend.token, friendToken, data.key);
+            updateFriendOfEvent(friend.token, friendToken, key);
         })
-        updateFriendOfEvent(friendToken, friendToken, data.key).then(() => {
-        });
+        updateFriendOfEvent(friendToken, friendToken, key)
     })
 }
 

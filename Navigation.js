@@ -183,7 +183,7 @@ export default function AppRoute(){
             ) : (
                 <Stack.Navigator>
                     {newUser ? (
-                        <Stack.Screen name="NewUserSetup" children={(props) => <NewUserSetupPage {...props}
+                        <Stack.Screen name="NewUserSetup" options={{headerShown: false}} children={(props) => <NewUserSetupPage {...props}
                             userToken = {userToken}></NewUserSetupPage>}>
                         </Stack.Screen>
                     ):(
@@ -221,8 +221,9 @@ export default function AppRoute(){
                                     </Stack.Screen>
                                 </Stack.Group>
                             ):(
-                                <Stack.Screen name = "LoadingPage" options = {{headerShown: false}} children = {(props) => <LoadingPage {...props}>
-                                    </LoadingPage>}></Stack.Screen>
+                                <Stack.Screen name = "LoadingPage" options={{headerShown: false}} children = {(props) => <LoadingPage {...props}>
+                                    </LoadingPage>}>
+                                </Stack.Screen>
                             )}
                         </Stack.Group>
                     )}

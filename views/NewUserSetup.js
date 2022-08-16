@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { Formik } from "formik";
-import { StyleSheet, View, Text, Button, TextInput} from "react-native";
+import { StyleSheet, View, Text, Button, TextInput, ImageBackground, TouchableOpacity} from "react-native";
 import { useDispatch } from "react-redux";
 import { setNewUserFalse } from "../redux/authSlice";
 import { newUserDoc, saveUsername, setUsername } from "../redux/firestoreSlice";
@@ -46,62 +46,62 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
   const storeUsername =  (name) => {
     if(name.length > 0){
       const colorScheme = selectColorScheme();
-
-      newUserDoc(userToken, name, colorScheme).then(() => {
-        dispatch(setUsername({
-          username: name,
-          colorScheme: colorScheme,
-          isLoaded: true
-        }))
-        dispatch(setNewUserFalse());
-        dispatch(getCurrentLocation());
-      })
+      if(checkBoxOne && checkBoxTwo){
+        newUserDoc(userToken, name, colorScheme).then(() => {
+          dispatch(setUsername({
+            username: name,
+            colorScheme: colorScheme,
+            isLoaded: true
+          }))
+          dispatch(setNewUserFalse());
+          dispatch(getCurrentLocation());
+        }) 
+      }else{
+        alert('Please accept terms and conditions')
+      }
     }else{
       alert('Please enter a username');
     }
   }  
 
     return(
-      <View style={styles.container}>
+      <ImageBackground style={styles.backgroundImg} source={require('../assets/background.png')}>
         <StatusBar></StatusBar>
-        <Text>NewUserSetup</Text>
-        <Text>Set your username</Text>
-        <Text>Be careful! can only set it once</Text>
+        <View style={styles.textContainer}>
+          <Text style={styles.titleText}>Enter a username</Text>
+          <Text style={styles.mediumText}>This is how others will see you</Text>
+          <Text style={styles.smallText}>Be careful! You can't change this once it's set</Text>
+        </View>
         <Formik initialValues={{username: ''}} onSubmit={values => storeUsername(values.username)}>
           {({handleChange, handleSubmit, values}) => (
-            <View>
-            <Text>Please enter username</Text>
-            <TextInput placeholder="Username" onChangeText={handleChange('username')} value = {values.username}></TextInput>
-            <Button title = "Store username" onPress={handleSubmit}></Button>
-          </View>
+            <View style = {styles.inputContainer}>
+              <TextInput style={styles.usernameInput} placeholder="Username" onChangeText={handleChange('username')} value = {values.username}></TextInput>
+              <View style = {styles.allCheckBoxes}>
+                <View style = {styles.checkBox}>
+                  <Checkbox style={styles.checkBoxStyle} color={'#75D0E3'} value={checkBoxOne} onValueChange={() => {setCheckBoxOne(!checkBoxOne)}}></Checkbox>
+                  <Text style={styles.checkText}>I agree to the terms and conditions</Text>
+                </View>
+                <View style={styles.checkBox}>
+                  <Checkbox style={styles.checkBoxStyle} color={'#75D0E3'} value={checkBoxTwo} onValueChange= {() => {setCheckBoxTwo(!checkBoxTwo)}}></Checkbox>
+                  <Text style={styles.checkText}>I promise to be a nice friend</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.buttonBackground} onPress={handleSubmit}>
+                <Text style={styles.buttonText}>Next</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </Formik>
-        <View style = {styles.allCheckBoxes}>
-            <View style = {styles.checkBox}>
-                <Checkbox style={styles.checkBoxStyle} color={'#75D0E3'} value={checkBoxOne} onValueChange={() => {setCheckBoxOne(!checkBoxOne)}}></Checkbox>
-                <Text style={styles.checkText}>I agree to the terms and conditions</Text>
-            </View>
-            <View style={styles.checkBox}>
-                <Checkbox style={styles.checkBoxStyle} color={'#75D0E3'} value={checkBoxTwo} onValueChange= {() => {setCheckBoxTwo(!checkBoxTwo)}}></Checkbox>
-                <Text style={styles.checkText}>I promise to be a nice friend</Text>
-            </View>
-        </View>
-        <Text>Tis simple to use</Text>
-        <Text>click share button in modal to send invite link to friend - Friend will accept ord deny</Text>
-        <Text>To plan event, hold down location on map to initiate event process</Text>
-      </View>
+      </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#fff',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     allCheckBoxes: {
-      marginTop: 75
+      marginTop: 50
+    },
+    textContainer:{
+      alignItems: 'center'
     },
     checkBox: {
         marginTop: 10,
@@ -117,4 +117,64 @@ const styles = StyleSheet.create({
         height: 27,
         borderRadius: 5
     },
+    backgroundImg: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center'
+    },
+    titleText:{
+      fontFamily: 'TextBold',
+      color: '#454A4D',
+      fontSize: 20
+    },
+    mediumText:{
+      marginTop: 10,
+      fontFamily: 'TextBold',
+      color: '#454A4D',
+      fontSize: 15
+    },
+    smallText:{
+      fontFamily: 'TextLight',
+      color: "#6D7377",
+      fontSize: 13,
+      marginTop: 40
+    },
+    usernameInput: {
+      backgroundColor: '#FFFFFF99',
+      borderRadius: 5,
+      paddingLeft: 15,
+      paddingTop: 17,
+      paddingBottom: 17,
+      marginTop: 20,
+      width: '80%',
+      fontFamily: 'TextBold',
+      fontSize: 15,
+      color: '#454A4D'
+    },
+    inputContainer:{
+      width: '100%',
+      alignItems: 'center'
+    },
+    buttonText: {
+      textAlign: 'center',
+      paddingLeft : 130,
+      paddingRight : 130,
+      marginTop: 17,
+      marginBottom: 17,
+      fontSize: 20,
+      fontFamily: 'TextBold',
+      color: '#FFFFFF'
+    },
+    buttonBackground: {
+      backgroundColor : '#58C4CB',
+      marginTop: 120,
+      borderRadius:10,
+      borderColor: '#58C4CB'
+    },
+    centerText:{
+      width: '100%',
+      alignItems: 'center',
+      marginLeft: 25
+    }
   });

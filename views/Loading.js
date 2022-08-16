@@ -1,22 +1,20 @@
-import { Text, View, StyleSheet, Image } from "react-native";
-import { AntDesign } from '@expo/vector-icons'; 
+import { StyleSheet, Image, ImageBackground } from "react-native";
 
 export const LoadingPage = ({navigation}) => {
 
     return(
-      <View style={styles.container}>
-        <Text>LoadingPage</Text>
+      <ImageBackground style={styles.container} source={require('../assets/background.png')}>
         <Image source={require('../assets/loading.gif')}></Image>
-      </View>
+      </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      backgroundColor: '#fff',
       alignItems: 'center',
       justifyContent: 'center',
+      width: '100%',
+      height: '100%'
     },
   });
 
