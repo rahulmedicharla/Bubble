@@ -1,10 +1,14 @@
 //react imports
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Dimensions, Button, Text, TextInput, TouchableOpacity, Share, Keyboard, Image, ImageBackground, TouchableWithoutFeedback } from 'react-native';
+import {View, Button, Text, TextInput, TouchableOpacity, Share, Keyboard, Image, ImageBackground, TouchableWithoutFeedback } from 'react-native';
 import MapView, { Callout, Marker } from 'react-native-maps';
 import { Formik } from "formik";
 import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
+import styles from './styling/NearYouStyling'
+import { Ionicons } from '@expo/vector-icons';
+import { AntDesign } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 //redux imports
 import { acceptFriendRequest, addFriend, createEvent, deleteEvent, getCurrentLocation, getEvents, getFriendsLocation, getFriendsRSVPEvents, 
@@ -24,8 +28,8 @@ import { mapsApiKey } from '../GoogleKeys'
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
 
-export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocations, friendsEvents, friendToken,
-  username, friendsList, pendingFriendToken, pendingFriendUsername, onLoadZoomToLoc, colorScheme, currentLoc}) => {
+export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocations, friendToken,
+  username, friendsList, pendingFriendToken, pendingFriendUsername, pendingFriendColor, onLoadZoomToLoc, colorScheme, currentLoc}) => {
 
   const db = getDatabase();
 
@@ -41,6 +45,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
   const [eventSelectionButtonVisible, setEventSelectionButtonVisible] = useState(true);
 
   const [segmentedControl, setSegmentedControl] = useState(true);
+  const [addFriendsIndex, setAddFriendsIndex] = useState(0);
 
 
   //react temp consts
@@ -55,7 +60,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
   const isValidRequest = () => {
     const tokenArray = friendsList.map((friend) => {return friend.token})
     if(!tokenArray.includes(pendingFriendToken)){
-      acceptFriendRequest(friendToken, pendingFriendToken, username, pendingFriendUsername)
+      acceptFriendRequest(friendToken, pendingFriendToken, username, pendingFriendUsername, pendingFriendColor)
   }else{
       alert('already friends with user');
       denyFriendRequest();
@@ -66,11 +71,12 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
     dispatch(resetPendingFriend());
   }
 
-  const shareFriendToken = (friendToken, username) => {
+  const shareFriendToken = (friendToken, username, colorScheme) => {
     const link = Linking.createURL('pendingFriendRequest', {
       queryParams: {
         friendToken: friendToken,
-        username: username
+        username: username,
+        color: colorScheme.marker
       }
     });
     Share.share(
@@ -126,7 +132,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
       if(snapshot.val() == 'fulfilled'){
         getPendingFriendRequestData(friendToken).then((data) => {
           addFriend(colorScheme, data.friendToken, currentLoc, username, friendToken).then((key) => {
-            addFriendToList(userToken, data.username, data.friendToken, key).then(() => {
+            addFriendToList(userToken, data.username, data.friendToken, data.color, key).then(() => {
               resetMyPendingFriendRequest(friendToken);
               dispatch(getFirestoreData(userToken))
               dispatch(resetPendingFriend());
@@ -136,7 +142,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
       }else if(snapshot.val() == 'needsAction'){
         getPendingFriendRequestData(friendToken).then((data) => {
           addFriend(colorScheme, data.friendToken, currentLoc, username, friendToken).then((key) => {
-            addFriendToList(userToken, data.username, data.friendToken, key).then(() => {
+            addFriendToList(userToken, data.username, data.friendToken, data.color, key).then(() => {
               resetMyPendingFriendRequest(friendToken);
               dispatch(getFirestoreData(userToken))
               dispatch(resetPendingFriend());
@@ -174,10 +180,8 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
     //timer to update loc
     const timer = setTimeout(() => {
       dispatch(getCurrentLocation()).then(() => {
-        console.log('updating');
         if(friendsList != null && friendsList.length > 0){
           updateLoc(currentLoc, friendsList);
-          console.log('updatingLoc');
         }
       });
     }, 60000)
@@ -217,13 +221,6 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
     }
   }
 
-  
-
-  /*
-
-  CHECK WNY MARKERS ARE DIFFERENT SIZES
-  CHECK WHY VIEW EVENT DATA INDENTED
-  */
   return(
       <TouchableWithoutFeedback onPress={() => {Keyboard.dismiss()}}>
           <View style={styles.container}>
@@ -268,22 +265,81 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
               <ImageBackground style= {styles.modalBackground} source={require('../assets/background.png')}>
                 {/* SHOW ADD FRIEND DATA */}
                 {showAddFriendData == true ? (
-                  <View>
-                    <Text>Friends</Text>
-                    {friendsList.map(friend => {
-                      return (<Text key={friend.token}>{friend.token} + {friend.name}</Text>)
-                    })}
-                    <TouchableOpacity onPress={() => shareFriendToken(friendToken, username)}>
-                      <MaterialCommunityIcons name="share" size={40} color="black"></MaterialCommunityIcons>
-                    </TouchableOpacity>
-                    {pendingFriendToken != null ? (
-                        <View>
-                          <Text>Accept Friend Request from {pendingFriendUsername}</Text>
-                          <Button title= "accept" onPress={isValidRequest}></Button>
-                          <Button title = "deny" onPress={denyFriendRequest}></Button>
+                  <View style={styles.modalViewContainer}>
+                    {addFriendsIndex == 0 ? (
+                      <View>
+                        <View style={styles.segmentedContainerFriends}>
+                          <TouchableOpacity><Text style={[styles.addFriendsSegmentText, styles.highlightedText]}>My Friends</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => {setAddFriendsIndex(1)}}><Text style={styles.addFriendsSegmentText}>Add Friends</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => {setAddFriendsIndex(2)}}><Text style={styles.addFriendsSegmentText}>Set Bubble</Text></TouchableOpacity>
                         </View>
+                        {friendsList.length == 0 ? (
+                          <View style = {styles.noFriendsContainer}>
+                            <Text style = {styles.infoText}>Looks like you don't have any friends yet</Text>
+                            <TouchableOpacity style={styles.addFriendsNavButton} onPress={() => {setAddFriendsIndex(1)}}>
+                              <Image style={styles.addFriendsEmoji} source={require('../assets/emojis/addFriends.png')}></Image>
+                              <Text style= {styles.addFriendsNavText}>Add Friends</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ):null}
+                        <View style={styles.friendsListContainer}>
+                          {friendsList.map((friend) => {
+                            return (
+                              <View key = {friend.token} style = {styles.friendsList}>
+                                <Image source={parseInt(friend.color)}></Image>
+                                <Text style = {styles.friendText}>{friend.name}</Text>
+                              </View>
+                            )
+                          })}
+                        </View>
+                      </View>
                     ):null}
-                    <Text>Friends Events</Text>
+                    {addFriendsIndex == 1 ? (
+                      <View>
+                        <View style={styles.segmentedContainerFriends}>
+                          <TouchableOpacity onPress={() => {setAddFriendsIndex(0)}}><Text style={[styles.addFriendsSegmentText]}>My Friends</Text></TouchableOpacity>
+                          <TouchableOpacity><Text style={[styles.addFriendsSegmentText, styles.highlightedText]}>Add Friends</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => {setAddFriendsIndex(2)}}><Text style={styles.addFriendsSegmentText}>Set Bubble</Text></TouchableOpacity>
+                        </View>
+                        <View style={styles.addFriendsTextContainer}>
+                          <Text style={styles.infoText}>You can have up to five friends in your bubble.</Text>
+                          <Text style = {styles.infoText}>Choose wisely</Text>
+                        </View>
+
+                        {pendingFriendToken != null ? (
+                          <View style = {styles.pendingRequest}>
+                            <View style={styles.hLine}></View>
+                            <View style=  {styles.pendingUser}>
+                              <Image source = {parseInt(pendingFriendColor)}></Image>
+                              <Text style = {styles.pendingUserText}>{pendingFriendUsername}</Text>
+                              <View style={styles.pendingResultContainer}>
+                                <Text style = {styles.pendingInfoText}>Accept</Text>
+                                <TouchableOpacity style={styles.resultIcon} onPress={isValidRequest}><AntDesign name="checkcircle" size={20} color="white"></AntDesign></TouchableOpacity>
+                                <TouchableOpacity style={styles.resultIcon} onPress={denyFriendRequest}><Feather name="x" size={24} color="black"></Feather></TouchableOpacity>
+                              </View>
+                            </View>
+                          </View>
+                        ):null}
+
+                        <View style = {styles.addFriendsLink}>
+                          <View style={styles.hLine}></View>
+                          <Text style = {styles.inviteFriendsTitle}>Invite Friends</Text>
+                          <TouchableOpacity style={styles.shareLinkContainer} onPress={() => shareFriendToken(friendToken, username, colorScheme)}>
+                            <Ionicons style={styles.shareLinkIcon} name="share-outline" size={20} color="black"></Ionicons>
+                            <Text style = {styles.shareLinkText}>Share</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ):null}
+                    {addFriendsIndex == 2 ? (
+                      <View>
+                        <View style={styles.segmentedContainerFriends}>
+                          <TouchableOpacity onPress={() => {setAddFriendsIndex(0)}}><Text style={[styles.addFriendsSegmentText]}>My Friends</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => {setAddFriendsIndex(1)}}><Text style={styles.addFriendsSegmentText}>Add Friends</Text></TouchableOpacity>
+                          <TouchableOpacity><Text style={[styles.addFriendsSegmentText, styles.highlightedText]}>Set Bubble</Text></TouchableOpacity>
+                        </View>
+                      </View>
+                    ):null}
                   </View>
                 ):null}
 
@@ -469,7 +525,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
                 setShowAddFriendData(true);
               }}>
                 <Image style={styles.selectionEmoji} source={require('../assets/emojis/addFriends.png')}></Image>
-                <Text style = {styles.selectionText}>Add Friends</Text>
+                <Text style = {styles.selectionText}>My Bubble</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.customSelection} onPress={() => {
@@ -513,272 +569,3 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
       </TouchableWithoutFeedback>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  map: {
-    width: Dimensions.get('window').width, 
-    height: Dimensions.get('window').height,
-    zIndex: -1,
-  },
-  footerButton: {
-    position: 'absolute',
-    zIndex: 10,
-    bottom: 35,
-    right: 25
-  },
-  footerSelection: {
-    position: 'absolute',
-    zIndex: 10,
-    right: 25,
-    bottom: 30,
-    alignItems: 'flex-end'
-  },
-  backgroundImg: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  modalBackground: {
-    height: '100%',
-  },
-  modalViewContainer:{
-    marginLeft: 35,
-  },
-  selectionEmoji: {
-    marginLeft: 13
-  },
-  selectionButton: {
-    marginBottom: 5
-  },
-  customSelection: {
-    marginBottom: 17,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: 'rgba(0,0,0, .4)', 
-    shadowOffset: { height: 1, width: 1 }, 
-    shadowOpacity: 1, 
-    shadowRadius: 1, 
-  },
-  selectionText: {
-    fontFamily: 'TextBold',
-    marginLeft: 11,
-    paddingRight: 29,
-    paddingTop: 10,
-    paddingBottom: 9,
-    color: '#454A4D',
-    fontSize: 15,
-  },
-  createEventText: {
-    fontFamily: 'TextBold',
-    fontSize: 17,
-    marginTop: 30
-  },
-  createEventInputs: {
-    marginTop: 5,
-    paddingLeft: 16,
-    paddingRight: 10,
-    borderRadius: 7,
-    fontFamily: "TextBold",
-    color: '#AFB9BF',
-    backgroundColor: '#FFFFFF66',
-    fontSize: 14
-  },
-  createEventName: {
-    width: '45%'
-  },
-  createEventTime: {
-    width: '18%'
-  },
-  createEventContainer: {
-    flexDirection: 'row',
-    marginTop: 16,
-  },
-  placesInputContainer: {
-    position: 'relative',
-    marginTop: 16,
-    width: '89%',
-    backgroundColor: 'transparent',
-    borderRadius: 10,
-  },
-  placesInputBox: {
-    paddingTop: 13,
-    paddingBottom: 13,
-    paddingLeft: 16,
-    paddingRight: 10,
-    fontSize: 14,
-    borderRadius: 7,
-    backgroundColor: "#FFFFFF85",
-    fontFamily: "TextBold",
-    color: '#AFB9BF',
-    right: 8
-  },
-  createEventButton: {
-    flexDirection:'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    width: 158,
-    borderRadius: 5,
-    marginTop: 42,
-    paddingTop: 2,
-    paddingBottom: 2,
-    marginLeft: '23%'
-  },
-  atText: {
-    marginLeft: 15,
-    marginRight: 15,
-    bottom: 12
-  },
-  smallText: {
-    marginTop: 18,
-    fontFamily: 'TextLight',
-    fontSize: 10,
-    marginLeft: '16%'
-  },
-  eventTitleStyle: {
-    fontFamily: 'TextBold',
-    fontSize: 18,
-  },
-  viewEventContainer: {
-    marginLeft: 16
-  },
-  markerCallout: {
-    borderRadius: 5,
-    boxShadow: "rgba(69, 81, 88, 0.1)"
-  },
-  markerText: {
-    fontFamily: 'TextBold',
-    fontSize: 17, 
-    paddingTop: 7,
-    paddingBottom: 7,
-    paddingLeft: 10,
-    paddingRight: 11
-  },
-  eventMarker:{
-    borderRadius: 5,
-    boxShadow: "rgba(69, 81, 88, 0.1)",
-    backgroundColor: '#F8D7D5',
-    flexDirection: 'row'
-  },
-  eventText: {
-    fontFamily: 'TextBold',
-    fontSize: 17, 
-    paddingTop: 7,
-    paddingBottom: 7,
-    paddingLeft: 10,
-    paddingRight: 11,
-    color: '#CD534C'
-  },
-  pendingReponseUser: {
-    flexDirection: 'row',
-    marginBottom: 10,
-    alignItems: 'center',
-  },
-  pendingResponseIcon: {
-    width: 23,
-    height: 23
-  },
-  statusIcons: {
-    position:'relative',
-    right: 13,
-    top: 4
-  },
-  pendingResponseUserName: {
-    fontFamily: 'TextBold',
-    color: '#434343',
-    position: 'relative',
-    right: 5,
-    fontSize: 15
-  },
-  pendingResponseUserMetadata: {
-    fontFamily: 'TextLight',
-    color: '#AFAFAF',
-    marginLeft: 3
-  },
-  statusChangeContainer: {
-    marginTop: 30,
-    flexDirection: 'row',
-    width:'100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusAcceptedButton: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    borderRadius: 5,
-    marginRight: 10,
-  },
-  statusAcceptedLogo: {
-    marginLeft: 10,
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  statusAcceptedText: {
-    marginLeft: 10,
-    marginRight: 15
-  },
-  segmentedContainer: {
-    flexDirection: 'row',
-    marginTop: 10,
-    marginBottom: 10
-  },
-  segmentedText: {
-    color: '#6D7377',
-    fontFamily: 'TextBold',
-    marginRight: 30,
-  },
-  highlightedText: {
-    textDecorationLine: 'underline'
-  },
-  eventLocationContainer:{
-    marginTop: 4,
-    marginBottom: 10
-  },
-  eventLocationText: {
-    fontFamily: 'TextBold',
-    color: '#434343',
-    fontSize: 15,
-    marginLeft: 6
-  },
-  eventLocationCount:{
-    fontFamily: 'TextLight',
-    marginLeft: 10,
-    fontSize: 12
-  },
-  horizontalOrg: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  addRecContainer: {
-    position: 'relative',
-    width: '89%',
-    backgroundColor: 'transparent',
-    borderRadius: 10,
-    marginBottom: 20
-  },
-  addRecInput: {
-    fontSize: 14,
-    borderRadius: 7,
-    backgroundColor: "#FFFFFF85",
-    fontFamily: "TextBold",
-    color: '#AFB9BF',
-    right: 8
-  },
-  addRecButton: {
-    width: '89%',
-    marginBottom: 20,
-    alignItems: 'flex-end'
-  },
-  addRecText:{
-    fontFamily: 'TextBold'
-  }
-});

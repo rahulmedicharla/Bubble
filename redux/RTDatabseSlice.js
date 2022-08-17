@@ -292,20 +292,22 @@ const updateStatusToRerender = (pendingResponses , key) => {
 
 */
 
-export const acceptFriendRequest = (myFriendToken, otherFriendToken, username, otherFriendUsername) => {
+export const acceptFriendRequest = (myFriendToken, otherFriendToken, username, otherFriendUsername, color) => {
     const db = getDatabase();
 
     update(ref(db, otherFriendToken + '/pendingFriendRequest/'), {
         status: 'needsAction',
         friendToken: myFriendToken,
-        username: username
+        username: username,
+        color: color
     }).then(() => {
     })
 
     update(ref(db, myFriendToken + '/pendingFriendRequest/'), {
         status: 'fulfilled',
         friendToken: otherFriendToken,
-        username: otherFriendUsername
+        username: otherFriendUsername,
+        color: color
     }).then(() => {
     })
 }
@@ -354,22 +356,6 @@ export const resetMyPendingFriendRequest = async (friendToken) => {
 
 */
 
-export const getFriendsRSVPEvents = createAsyncThunk('realtimeDatabase, getFriendsRSVPEvents', async(data) => {
-    const db = getDatabase();
-
-    const snapshot = await get(child(ref(db), '/events/' + data.path));
-
-    const event = {
-        eventData: {
-            origin: snapshot.val(),
-            name: data.name,
-            token: data.token
-        }
-    }
-
-    return event;  
-})
-
 export const getEvents = createAsyncThunk('realtimeDatabase/getEvents', async(data) => {
     const db = getDatabase();
 
@@ -384,8 +370,7 @@ export const getEvents = createAsyncThunk('realtimeDatabase/getEvents', async(da
     return event;
 })
 
-export const getCurrentLocation = createAsyncThunk('realtimeDatabase/getCurrentLocation', async() => {
-    const { status } = await requestForegroundPermissionsAsync();
+export const getCurrentLocation = createAsyncThunk('realtimeDatabase/getCurrentLocation', async(status) => {
     if (status !== 'granted') {
       setErrorMsg('Permission to access location was denied');
       return;
@@ -472,12 +457,12 @@ export const newUserRLDB = (userId) => {
 const initialState = {
     friendsLocation: [],
     eventLocations: [],
-    friendsEvents: [],
     loc: {},
     currentLocIsLoaded: false,
     friendToken: null,
     pendingFriendToken: null,
     pendingFriendUsername: null,
+    pendingFriendColor: null,
     onLoadZoomToLoc: true
 }
 
@@ -491,6 +476,7 @@ const RTDatabaseSlice = createSlice({
         setPendingFriend: (state,action) => {
             state.pendingFriendToken = action.payload.pendingFriendToken;
             state.pendingFriendUsername = action.payload.pendingFriendUsername;
+            state.pendingFriendColor = action.payload.pendingFriendColor;
         },
         resetPendingFriend: (state) => {
             state.pendingFriendToken = null;
@@ -498,9 +484,6 @@ const RTDatabaseSlice = createSlice({
         },
         resetEventLocations: (state) => {
             state.eventLocations = []
-        },
-        resetFriendEvents: (state) => {
-            state.friendsEvents = []
         },
         setOnLoadZoomToLoc: (state, action) => {
             state.onLoadZoomToLoc = action.payload.onLoadZoomToLoc;
@@ -517,9 +500,6 @@ const RTDatabaseSlice = createSlice({
         builder.addCase(getEvents.fulfilled, (state, action) => {
             state.eventLocations.push(action.payload.eventData)
         })
-        builder.addCase(getFriendsRSVPEvents.fulfilled, (state, action) => {
-            state.friendsEvents.push(action.payload.eventData);
-        })
     }
     
 });
@@ -531,10 +511,10 @@ export const selectCurrentLocation = (state) => state.realtimeDatabase.loc;
 export const selectCurrentLocationIsLoaded = (state) => state.realtimeDatabase.currentLocIsLoaded;
 export const selectFriendsLocation = (state) => state.realtimeDatabase.friendsLocation;
 export const selectEventLocations = (state) => state.realtimeDatabase.eventLocations;
-export const selectFriendsEvents = (state) => state.realtimeDatabase.friendsEvents;
 export const selectFriendToken = (state) => state.realtimeDatabase.friendToken;
 export const selectPendingFriendToken = (state) => state.realtimeDatabase.pendingFriendToken;
 export const selectPendingFriendUsername = (state) => state.realtimeDatabase.pendingFriendUsername;
+export const selectPendingFriendColor = (state) => state.realtimeDatabase.pendingFriendColor;
 export const selectOnLoadZoomToLoc = (state) => state.realtimeDatabase.onLoadZoomToLoc
 
 export default RTDatabaseSlice.reducer;

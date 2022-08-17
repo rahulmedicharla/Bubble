@@ -14,8 +14,9 @@ import { LoadingPage } from './views/Loading';
 import { selectFontIsLoaded, selectIsDeepLinkForeground, selectIsLoggedIn, selectNewUser, selectUserToken, selectVerificationCode, setFontIsLoaded, setIsDeepLinkForeground, setSignOut } from './redux/authSlice';
 import { useSelector, useDispatch } from 'react-redux/';
 import { checkIfNewUser, getFirestoreData, selectColorScheme, selectFriendsList, selectIsLoaded, selectUsername } from './redux/firestoreSlice';
-import { newUserRLDB, selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsEvents, selectFriendsLocation, selectFriendToken,  
+import { newUserRLDB, selectCurrentLocation, selectCurrentLocationIsLoaded, selectEventLocations, selectFriendsLocation, selectFriendToken,  
     selectOnLoadZoomToLoc,  
+    selectPendingFriendColor,  
     selectPendingFriendToken, selectPendingFriendUsername, setPendingFriend} from './redux/RTDatabseSlice';
 import { setSignIn } from "./redux/authSlice";
 import { getCurrentLocation, setFriendToken } from "./redux/RTDatabseSlice";
@@ -54,7 +55,6 @@ export default function AppRoute(){
     //RTDB slice variables
     const friendsLocation = useSelector(selectFriendsLocation);
     const eventLocations = useSelector(selectEventLocations);
-    const friendsEvents = useSelector(selectFriendsEvents);
 
     const friendToken = useSelector(selectFriendToken);
     const currentLoc = useSelector(selectCurrentLocation);
@@ -63,6 +63,7 @@ export default function AppRoute(){
     
     const pendingFriendToken = useSelector(selectPendingFriendToken);
     const pendingFriendUsername = useSelector(selectPendingFriendUsername);
+    const pendingFriendColor = useSelector(selectPendingFriendColor);
 
     const imagesToLoad =  [
         require('./assets/background.png'), 
@@ -72,10 +73,12 @@ export default function AppRoute(){
         require('./assets/emojis/viewEvents.png'),
         require('./assets/emojis/createEvent.png'),
         require('./assets/emojis/addFriends.png'),
+        require('./assets/emojis/manageBubble.png'),
         require('./assets/markerColors/purpleMarker.png'),
         require('./assets/markerColors/greenMarker.png'),
         require('./assets/markerColors/lightBlueMarker.png'),
         require('./assets/markerColors/blueMarker.png'),
+        require('./assets/markerColors/orangeMarker.png'),
         require('./assets/status/statusChangedAccepted.png'),
         require('./assets/status/statusChangedMaybe.png'),
         require('./assets/markerColors/eventMarker.png'),
@@ -108,7 +111,8 @@ export default function AppRoute(){
         const pendingFriendRequest = Linking.parse(url);
         const data = {
             pendingFriendToken: pendingFriendRequest.queryParams.friendToken,
-            pendingFriendUsername: pendingFriendRequest.queryParams.username
+            pendingFriendUsername: pendingFriendRequest.queryParams.username,
+            pendingFriendColor: pendingFriendRequest.queryParams.color
         }
 
         dispatch(setPendingFriend(data));
@@ -126,6 +130,7 @@ export default function AppRoute(){
         }
 
         loadFonts().then(() => {
+            loadImages();
             dispatch(setFontIsLoaded({fontIsLoaded: true}));
         })
 
@@ -134,7 +139,7 @@ export default function AppRoute(){
                 checkIfNewUser(user.uid).then((userExists) => {
                     if(userExists){
                         dispatch(getFirestoreData(user.uid))
-                        dispatch(getCurrentLocation());
+                        dispatch(getCurrentLocation('granted'));
                     }else{
                         newUserRLDB(user.uid);
                     }
@@ -199,12 +204,12 @@ export default function AppRoute(){
                                             userToken = {userToken}
                                             friendsLocation = {friendsLocation}
                                             eventLocations = {eventLocations}
-                                            friendsEvents = {friendsEvents}
                                             friendToken = {friendToken}
                                             username = {username}
                                             friendsList = {friendsList}
                                             pendingFriendToken = {pendingFriendToken}
                                             pendingFriendUsername = {pendingFriendUsername}
+                                            pendingFriendColor = {pendingFriendColor}
                                             onLoadZoomToLoc = {onLoadZoomToLoc}
                                             colorScheme = {colorScheme}
                                             currentLoc = {currentLoc} ></NearYouPage>}>

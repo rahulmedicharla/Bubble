@@ -7,6 +7,7 @@ import { newUserDoc, saveUsername, setUsername } from "../redux/firestoreSlice";
 import { getCurrentLocation } from "../redux/RTDatabseSlice";
 import Checkbox from 'expo-checkbox';
 import { useState } from "react";
+import { requestForegroundPermissionsAsync } from "expo-location";
 export const NewUserSetupPage = ({navigation, userToken}) => {
 
   const dispatch = useDispatch();
@@ -15,7 +16,7 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
   const [checkBoxTwo, setCheckBoxTwo] = useState(false);
 
   const selectColorScheme = () => {
-    const colorNum = Math.floor(Math.random() * (4) + 1);
+    const colorNum = Math.floor(Math.random() * (5) + 1);
 
     let colorScheme = {};
     if(colorNum == 1){
@@ -33,14 +34,30 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
       colorScheme["marker"] = require('../assets/markerColors/greenMarker.png');
       colorScheme["backgroundColor"] = '#D2EBE6';
       colorScheme["textColor"] = '#41BEAC';
-    }else{
+    }else if(colorNum == 4){
       colorScheme["color"] = "lightBlue";
       colorScheme["marker"] = require('../assets/markerColors/lightBlueMarker.png');
       colorScheme["backgroundColor"] = '#DCEEF1';
       colorScheme["textColor"] = '#47B7F1';
+    }else{
+      colorScheme["color"] = "orange";
+      colorScheme["marker"] = require('../assets/markerColors/orangeMarker.png');
+      colorScheme["backgroundColor"] = '#FFD9C9';
+      colorScheme["textColor"] = '#E58359';
     }
 
     return colorScheme;
+  }
+
+  const loadApp = async(name, colorScheme) => {
+    const { status } = await requestForegroundPermissionsAsync();
+    dispatch(setUsername({
+      username: name,
+      colorScheme: colorScheme,
+      isLoaded: true
+    }))
+    dispatch(setNewUserFalse());
+    dispatch(getCurrentLocation(status));
   }
 
   const storeUsername =  (name) => {
@@ -48,13 +65,7 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
       const colorScheme = selectColorScheme();
       if(checkBoxOne && checkBoxTwo){
         newUserDoc(userToken, name, colorScheme).then(() => {
-          dispatch(setUsername({
-            username: name,
-            colorScheme: colorScheme,
-            isLoaded: true
-          }))
-          dispatch(setNewUserFalse());
-          dispatch(getCurrentLocation());
+          loadApp(name, colorScheme);
         }) 
       }else{
         alert('Please accept terms and conditions')
@@ -68,7 +79,7 @@ export const NewUserSetupPage = ({navigation, userToken}) => {
       <ImageBackground style={styles.backgroundImg} source={require('../assets/background.png')}>
         <StatusBar></StatusBar>
         <View style={styles.textContainer}>
-          <Text style={styles.titleText}>Enter a username</Text>
+          <Text style={styles.titleText}>Create username</Text>
           <Text style={styles.mediumText}>This is how others will see you</Text>
           <Text style={styles.smallText}>Be careful! You can't change this once it's set</Text>
         </View>

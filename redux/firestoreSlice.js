@@ -51,7 +51,7 @@ export const newUserDoc = async(userId, name, colorScheme) => {
 
 */
 
-export const addFriendToList = async(userId, name, friendToken, key) => {
+export const addFriendToList = async(userId, name, friendToken, color, key) => {
     const firestore = getFirestore();
     const docSnap = await getDoc(doc(firestore, 'users', userId));
 
@@ -62,7 +62,8 @@ export const addFriendToList = async(userId, name, friendToken, key) => {
             friendsList: [{
                 token: friendToken,
                 name: name,
-                key: key
+                key: key,
+                color: color
             }],
         }).then(() => {            
         })
@@ -70,7 +71,8 @@ export const addFriendToList = async(userId, name, friendToken, key) => {
         list.push({
             token: friendToken,
             name: name,
-            key: key
+            key: key,
+            color: color
         });
         await updateDoc(doc(firestore, 'users', userId), {
             friendsList: list,
