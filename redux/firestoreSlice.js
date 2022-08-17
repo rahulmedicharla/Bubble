@@ -1,6 +1,43 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { doc, getDoc, getFirestore, updateDoc, setDoc } from "firebase/firestore";
 
+export const getFriendsList = async(userId) => {
+    const firestore = getFirestore();
+    const docSnap = await getDoc(doc(firestore, 'users', userId));
+
+    let list = [];
+
+    if(docSnap.data().friendsList != null){
+
+        docSnap.data().friendsList.forEach((friend) => {
+            list.push(friend);
+        })
+
+    }
+
+    return list;
+}
+
+// export const getFriendsList = createAsyncThunk('firestore/getFirestoreData', async(userId) => {
+//     const firestore = getFirestore();
+//     const docSnap = await getDoc(doc(firestore, 'users', userId));
+
+//     let list = [];
+
+//     if(docSnap.data().friendsList != null){
+
+//         docSnap.data().friendsList.forEach((friend) => {
+//             list.push(friend);
+//         })
+
+//     }
+
+//     const data = {
+//         friendsList: list,
+//     }
+
+//     return data;
+// })
 
 /*
 

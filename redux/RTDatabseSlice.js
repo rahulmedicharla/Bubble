@@ -105,7 +105,7 @@ const updateMyFriendsOfAnothersEvent = async (pendingReponses, name, creator, ke
         if(!pendingResponsesArray.includes(child.val().friendToken)){
             updateFriendOfEvent(child.val().friendToken, creator, key).then(() => {
                 update(ref(db, 'events/' + creator + '/' + key + '/pendingResponses/'), {
-                    [Object.keys(snapshot).length -1]: {
+                    [Object.keys(snapshot).length]: {
                         name: child.val().name,
                         token: child.val().friendToken,
                         status: 'Unanswered',

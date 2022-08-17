@@ -14,8 +14,8 @@ import { Feather } from '@expo/vector-icons';
 import { acceptFriendRequest, addFriend, createEvent, deleteEvent, getCurrentLocation, getEvents, getFriendsLocation, getFriendsRSVPEvents, 
   getPendingFriendRequestData, reccomendNewLocation, resetEventLocations, resetFriendEvents, resetMyPendingFriendRequest, resetPendingFriend, rsvpToAnothersEvent, setOnLoadZoomToLoc, updateLoc, updateVote, updateYourStatusInEvent } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
-import { getDatabase, off, onValue, ref } from 'firebase/database';
-import { addFriendToList, getFirestoreData } from '../redux/firestoreSlice';
+import { getDatabase, limitToLast, off, onValue, ref } from 'firebase/database';
+import { addFriendToList, getFirestoreData, getFriendsList } from '../redux/firestoreSlice';
 
 //Sharing imports
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -228,11 +228,13 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
         latitude: tempPlace.result.geometry.location.lat,
         longitude: tempPlace.result.geometry.location.lng
       }
-      createEvent(title, tempPlace.result.name, time, latLng, friendToken, friendsList, username, colorScheme).then(() => {
-        setDirectionsVisible(false);
-        setTempPlace(null);
-        setTime('');
-      });
+      getFriendsList(userToken).then((list) => {
+        createEvent(title, tempPlace.result.name, time, latLng, friendToken, list, username, colorScheme).then(() => {
+          setDirectionsVisible(false);
+          setTempPlace(null);
+          setTime('');
+        });
+      })
     }else{
       alert('Invalid Event')
     }
