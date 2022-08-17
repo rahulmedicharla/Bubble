@@ -160,6 +160,21 @@ export default styles = StyleSheet.create({
       paddingLeft: 10,
       paddingRight: 11
     },
+    pendingEventCallout: {
+      borderRadius: 5,
+      boxShadow: "rgba(69, 81, 88, 0.1)",
+      backgroundColor: '#3B92F0',
+      flexDirection: 'row'
+    },
+    pendingEventCalloutText: {
+      fontFamily: 'TextBold',
+      fontSize: 17, 
+      paddingTop: 7,
+      paddingBottom: 7,
+      paddingLeft: 10,
+      paddingRight: 11,
+      color: '#FFFFFF'
+    },
     eventMarker:{
       borderRadius: 5,
       boxShadow: "rgba(69, 81, 88, 0.1)",

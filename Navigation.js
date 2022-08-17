@@ -28,6 +28,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import { HeaderRightButton } from './views/subComponents/HeaderRight';
 import { Asset } from 'expo-asset';
+import { requestForegroundPermissionsAsync } from 'expo-location';
 
 const Stack = createStackNavigator();
 
@@ -138,7 +139,7 @@ export default function AppRoute(){
             if(user){
                 checkIfNewUser(user.uid).then((userExists) => {
                     if(userExists){
-                        dispatch(getFirestoreData(user.uid))
+                        dispatch(getFirestoreData(user.uid))                        
                         dispatch(getCurrentLocation('granted'));
                     }else{
                         newUserRLDB(user.uid);

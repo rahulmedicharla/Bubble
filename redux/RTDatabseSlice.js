@@ -292,14 +292,14 @@ const updateStatusToRerender = (pendingResponses , key) => {
 
 */
 
-export const acceptFriendRequest = (myFriendToken, otherFriendToken, username, otherFriendUsername, color) => {
+export const acceptFriendRequest = (myFriendToken, otherFriendToken, username, otherFriendUsername, color, myColor) => {
     const db = getDatabase();
 
     update(ref(db, otherFriendToken + '/pendingFriendRequest/'), {
         status: 'needsAction',
         friendToken: myFriendToken,
         username: username,
-        color: color
+        color: myColor
     }).then(() => {
     })
 

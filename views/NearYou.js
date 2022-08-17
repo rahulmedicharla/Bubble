@@ -1,7 +1,7 @@
 //react imports
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import {View, Button, Text, TextInput, TouchableOpacity, Share, Keyboard, Image, ImageBackground, TouchableWithoutFeedback } from 'react-native';
+import {View, Button, Text, TextInput, TouchableOpacity, Share, Keyboard, Image, ImageBackground, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import MapView, { Callout, Marker } from 'react-native-maps';
 import { Formik } from "formik";
 import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
@@ -25,6 +25,7 @@ import { ModalEventRight } from './subComponents/modalEventRight';
 import PlacesInput from 'react-native-places-input';
 import { mapsApiKey } from '../GoogleKeys'
 import TimeInput from '@tighten/react-native-time-input';
+import MapViewDirections from 'react-native-maps-directions';
 
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
@@ -45,6 +46,9 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
 
   const [eventSelectionButtonVisible, setEventSelectionButtonVisible] = useState(true);
 
+  const [directionsVisible, setDirectionsVisible] = useState(false);
+  const [locDistance, setLocDistance] = useState(null);
+
   const [segmentedControl, setSegmentedControl] = useState(true);
   const [addFriendsIndex, setAddFriendsIndex] = useState(0);
   const [time, setTime] = useState('');
@@ -60,13 +64,17 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
   const dispatch = useDispatch();
 
   const isValidRequest = () => {
+    if(friendsList.length == 5){
+      alert('Already at max capacity with five friends');
+      return;
+    }
     const tokenArray = friendsList.map((friend) => {return friend.token})
     if(!tokenArray.includes(pendingFriendToken)){
-      acceptFriendRequest(friendToken, pendingFriendToken, username, pendingFriendUsername, pendingFriendColor)
+      acceptFriendRequest(friendToken, pendingFriendToken, username, pendingFriendUsername, pendingFriendColor, colorScheme.marker)
   }else{
       alert('already friends with user');
       denyFriendRequest();
-  }
+    }
   }
 
   const denyFriendRequest = () => {
@@ -193,6 +201,20 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
     }
   }, [currentLoc, friendsList, onLoadZoomToLoc])
 
+  const animateToFriend = (friend) => {
+    sheetRef.current.close();
+    friendsLocation.map((marker) => {
+      if(marker.friendToken == friend){
+        map.current.animateToRegion({
+          latitude: marker.latLng.latitude,
+          longitude: marker.latLng.longitude,
+          latitudeDelta: .008,
+          longitudeDelta: .008,
+        }, 1000)
+      }
+    })
+  }
+
   const handleTimeChange = (time, validTime) => {
     if (!validTime) return;
 
@@ -207,6 +229,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
         longitude: tempPlace.result.geometry.location.lng
       }
       createEvent(title, tempPlace.result.name, time, latLng, friendToken, friendsList, username, colorScheme).then(() => {
+        setDirectionsVisible(false);
         setTempPlace(null);
         setTime('');
       });
@@ -223,6 +246,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
       }
       const location = tempPlace.result.name;
       reccomendNewLocation(creator, key, token, pendingResponses, location, latLng).then(() => {
+        setDirectionsVisible(false);
         setTempPlace(null);
       })
     }else{
@@ -265,10 +289,35 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
               </Marker>)
               })
             })}
+
+            {/* DIRECTIONS */}
+            {(tempPlace != null && locDistance != null) ? (
+              <Marker title = "New Event" image={require('../assets/markerColors/eventMarker.png')} coordinate={{latitude: tempPlace.result.geometry.location.lat, longitude: tempPlace.result.geometry.location.lng}}>
+                <Callout tooltip>
+                  <View style={styles.pendingEventCallout}>
+                    <Text style={styles.pendingEventCalloutText}>{Math.floor(locDistance)} min</Text>
+                  </View>
+                </Callout>
+              </Marker>
+            ):null}
+            {directionsVisible ? (
+              <MapViewDirections key={tempPlace.result.name} apikey={mapsApiKey} origin={currentLoc} strokeColor='#3B92F0' strokeWidth={5} destination={{latitude: tempPlace.result.geometry.location.lat, longitude: tempPlace.result.geometry.location.lng}} onReady={result => {
+                setLocDistance(result.duration);
+                
+                map.current.animateToRegion({
+                  latitude: tempPlace.result.geometry.location.lat-.004,
+                  longitude: tempPlace.result.geometry.location.lng,
+                  latitudeDelta: .01,
+                  longitudeDelta: .01,
+                }, 1000)
+              }}></MapViewDirections>
+            ):null}
           </MapView>
           <BottomSheet handleStyle={{backgroundColor: '#E8E4F4'}}  ref={sheetRef} snapPoints={snapPoints} enablePanDownToClose index={-1} onClose={() => {
             Keyboard.dismiss();
             setEventSelectionButtonVisible(true);
+            setDirectionsVisible(false)
+            setTempPlace(null);
           }}>
             <BottomSheetView>
               <ImageBackground style= {styles.modalBackground} source={require('../assets/background.png')}>
@@ -294,10 +343,12 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
                         <View style={styles.friendsListContainer}>
                           {friendsList.map((friend) => {
                             return (
-                              <View key = {friend.token} style = {styles.friendsList}>
-                                <Image source={parseInt(friend.color)}></Image>
-                                <Text style = {styles.friendText}>{friend.name}</Text>
-                              </View>
+                              <TouchableOpacity key = {friend.token} onPress={() => {animateToFriend(friend.token)}}>
+                                <View style = {styles.friendsList}>
+                                  <Image source={parseInt(friend.color)}></Image>
+                                  <Text style = {styles.friendText}>{friend.name}</Text>
+                                </View>
+                              </TouchableOpacity>
                             )
                           })}
                         </View>
@@ -368,7 +419,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
                       </View>
 
                       <View>
-                        <PlacesInput stylesInput={styles.placesInputBox} requiredCharactersBeforeSearch={5} stylesContainer={styles.placesInputContainer} googleApiKey={mapsApiKey} onSelect={(place) => {setTempPlace(place)}} placeHolder={"Suggest a Location"} searchRadius={500} searchLatitude={parseFloat(currentLoc.latitude)} searchLongitude={parseFloat(currentLoc.longitude)} queryTypes="establishment" ></PlacesInput>
+                        <PlacesInput stylesInput={styles.placesInputBox} requiredCharactersBeforeSearch={5} stylesContainer={styles.placesInputContainer} googleApiKey={mapsApiKey} onSelect={(place) => {setTempPlace(place); setDirectionsVisible(true)}} placeHolder={"Suggest a Location"} searchRadius={500} searchLatitude={parseFloat(currentLoc.latitude)} searchLongitude={parseFloat(currentLoc.longitude)} queryTypes="establishment" ></PlacesInput>
                       </View>
 
                       <TouchableOpacity style={styles.createEventButton} onPress={handleSubmit}>
@@ -462,7 +513,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
                                       if(!event.origin.voteList.includes(friendToken)){
                                         return (
                                           <View key = {response.token}>
-                                            <PlacesInput stylesInput={styles.addRecInput} requiredCharactersBeforeSearch={5} stylesContainer={styles.addRecContainer} googleApiKey={mapsApiKey} onSelect={(place) => {setTempPlace(place)}} placeHolder={"Enter a recommendation..."} searchRadius={500} searchLatitude={parseFloat(currentLoc.latitude)} searchLongitude={parseFloat(currentLoc.longitude)} queryTypes="establishment" ></PlacesInput>
+                                            <PlacesInput stylesInput={styles.addRecInput} requiredCharactersBeforeSearch={5} stylesContainer={styles.addRecContainer} googleApiKey={mapsApiKey} onSelect={(place) => {setTempPlace(place); setDirectionsVisible(true)}} placeHolder={"Enter a recommendation..."} searchRadius={500} searchLatitude={parseFloat(currentLoc.latitude)} searchLongitude={parseFloat(currentLoc.longitude)} queryTypes="establishment" ></PlacesInput>
                                             <TouchableOpacity style={styles.addRecButton} onPress={() => {addNewLoc(event.origin.creator.token, event.origin.key, friendToken, event.origin.pendingResponses)}}>
                                               <Text style={styles.addRecText}>Recommend</Text>
                                             </TouchableOpacity>
