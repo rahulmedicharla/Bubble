@@ -14,7 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { acceptFriendRequest, addFriend, createEvent, deleteEvent, getCurrentLocation, getEvents, getFriendsLocation, getFriendsRSVPEvents, 
   getPendingFriendRequestData, reccomendNewLocation, resetEventLocations, resetFriendEvents, resetMyPendingFriendRequest, resetPendingFriend, rsvpToAnothersEvent, setOnLoadZoomToLoc, updateLoc, updateVote, updateYourStatusInEvent } from '../redux/RTDatabseSlice';
 import { useDispatch } from 'react-redux';
-import { getDatabase, off, onValue, ref, update } from 'firebase/database';
+import { getDatabase, off, onValue, ref } from 'firebase/database';
 import { addFriendToList, getFirestoreData } from '../redux/firestoreSlice';
 
 //Sharing imports
@@ -24,6 +24,7 @@ import { List } from 'react-native-paper';
 import { ModalEventRight } from './subComponents/modalEventRight';
 import PlacesInput from 'react-native-places-input';
 import { mapsApiKey } from '../GoogleKeys'
+import TimeInput from '@tighten/react-native-time-input';
 
 //https://github.com/react-native-maps/react-native-maps
 //https://gorhom.github.io/react-native-bottom-sheet/modal/usage
@@ -46,6 +47,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
 
   const [segmentedControl, setSegmentedControl] = useState(true);
   const [addFriendsIndex, setAddFriendsIndex] = useState(0);
+  const [time, setTime] = useState('');
 
 
   //react temp consts
@@ -191,7 +193,13 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
     }
   }, [currentLoc, friendsList, onLoadZoomToLoc])
 
-  const changeTempToPermanentEvent = (title, time, friendToken, friendsList, username, colorScheme) => {
+  const handleTimeChange = (time, validTime) => {
+    if (!validTime) return;
+
+    setTime(time);
+  }
+
+  const changeTempToPermanentEvent = (title, friendToken, friendsList, username, colorScheme) => {
     if(tempPlace && title.length > 0 && time.length > 0){
       sheetRef.current.close();
       const latLng = {
@@ -200,6 +208,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
       }
       createEvent(title, tempPlace.result.name, time, latLng, friendToken, friendsList, username, colorScheme).then(() => {
         setTempPlace(null);
+        setTime('');
       });
     }else{
       alert('Invalid Event')
@@ -345,7 +354,7 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
 
                 {/* SHOW CREATE EVENT DATA */}
                 {showCreateEventData == true ? (
-                  <Formik initialValues={{title: '', time: ''}} onSubmit={(values) => {changeTempToPermanentEvent(values.title.trim(), values.time.trim(), friendToken, friendsList, username, colorScheme)}}>
+                  <Formik initialValues={{title: ''}} onSubmit={(values) => {changeTempToPermanentEvent(values.title.trim(), friendToken, friendsList, username, colorScheme)}}>
                   {({handleChange, handleSubmit, values}) => (
                     <View style = {styles.modalViewContainer}>
                       <Text style = {styles.createEventText}>Create Event</Text>
@@ -353,7 +362,9 @@ export const NearYouPage = ({navigation, userToken, friendsLocation, eventLocati
                       <View style={styles.createEventContainer}>
                         <TextInput style={[styles.createEventInputs, styles.createEventName]} placeholderTextColor='#AFB9BF' placeholder="Name the event" onChangeText={handleChange('title')} value = {values.title}></TextInput>
                         <Text style = {[styles.createEventText, styles.atText]}>at</Text>
-                        <TextInput style={[styles.createEventInputs, styles.createEventTime]} placeholderTextColor='#AFB9BF' keyboardType={'number-pad'} placeholder="0:00" onChangeText={handleChange('time')} value = {values.time}></TextInput>
+
+                        <TimeInput errorText={null} styles={{componentContainer: {top: 12},input: {width: 86, right: 3}, toggle: {right: 50}}} onTimeChange={handleTimeChange} theme={styles.timeInput}></TimeInput>
+
                       </View>
 
                       <View>

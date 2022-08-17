@@ -70,8 +70,7 @@ export default styles = StyleSheet.create({
     },
     createEventInputs: {
       marginTop: 5,
-      paddingLeft: 16,
-      paddingRight: 10,
+      paddingLeft: 10,
       borderRadius: 7,
       fontFamily: "TextBold",
       color: '#AFB9BF',
@@ -79,10 +78,20 @@ export default styles = StyleSheet.create({
       fontSize: 14
     },
     createEventName: {
-      width: '45%'
+      width: '38%'
     },
     createEventTime: {
       width: '18%'
+    },
+    timeInput: {
+      inputBackgroundColor: '#FFFFFF66', 
+      inputTextColor: '#454A4D', 
+      inputBorderColor: 'transparent',  
+      toggleButtonBackgroundColor: 'transparent',
+      toggleButtonTextColor: '#454A4D',
+      toggleButtonActiveBackgroundColor: '#FFFFFF',
+      toggleButtonActiveTextColor: '#AFB9BF',
+      errorTextColor: 'transparent'
     },
     createEventContainer: {
       flexDirection: 'row',
@@ -121,9 +130,9 @@ export default styles = StyleSheet.create({
       marginLeft: '33%'
     },
     atText: {
-      marginLeft: 15,
-      marginRight: 15,
-      bottom: 12
+      marginLeft: 10,
+      marginRight: 12,
+      bottom: 8,
     },
     smallText: {
       marginTop: 18,
@@ -134,9 +143,10 @@ export default styles = StyleSheet.create({
     eventTitleStyle: {
       fontFamily: 'TextBold',
       fontSize: 18,
+      marginLeft: '8%'
     },
     viewEventContainer: {
-      marginLeft: 16
+      marginLeft: '10%'
     },
     markerCallout: {
       borderRadius: 5,
@@ -281,8 +291,7 @@ export default styles = StyleSheet.create({
     addRecText:{
       fontFamily: 'TextBold'
     },
-    friendsListContainer: {
-        marginTop: 30,
+    friendsListContainer: {        
     },
     friendsList: {
         flexDirection: 'row',
