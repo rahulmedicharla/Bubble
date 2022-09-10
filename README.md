@@ -2,11 +2,14 @@
 
 <b>A new social networking platforms that makes event organization with friends and meeting new people easy!</b>
 
+<b>Function:</b>
 <ul>
-<li>Uses geolocation to keep track of friends location for easier event planning and safety</li>
-<li>Enables meeting new people by allowing friends of friends to rsvp to created events</li>
-<li>Developed in React Native with Firebase Authentication, Realtime Database, and Firestore</li>
-<li>Incorporates visually appealing UI along with Google Maps Api for directions and autocomplete</li>
+  <li>Create a "bubble" of your closest five friends who live nearby (through magic link) and have access to each others location and status</li>
+  <li>Create an event at a nearby location on the map using Google Places Autocomplete and Directions API</li>
+  <li>People in your "bubble" can rsvp to event and rsvp'd members can vote or recommend on locations</li>
+  <li><b>If you rsvp'd to anothers event, then friends in your "bubble", separate to the creators "bubble", can also rsvp to the same event</b></li>
+  <li>This fosters meeting new people as you can now expand your circle and interact with friends of friends!</li>
+  <li>Developed using React Native, Google Places API, and GCP with a realtime database, firestore, and authentcation</li>
 </ul>
 
 <div style="display:inline">
